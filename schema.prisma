@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -16,7 +16,7 @@ model User {
   email         String    @unique
   name          String?
   password      String
-  role          Role      @default(TECHNICIAN)
+  role          String    @default("TECHNICIAN")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   tickets       Ticket[]  @relation("AssignedTickets")
@@ -69,10 +69,10 @@ model Contract {
   id            String    @id @default(cuid())
   clientId      String
   client        Client    @relation(fields: [clientId], references: [id])
-  type          ContractType
+  type          String
   startDate     DateTime
   endDate       DateTime?
-  sla           Json      // Almacena los términos del SLA
+  sla           String    // Almacena los términos del SLA como JSON string
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -82,8 +82,8 @@ model Ticket {
   id            String    @id @default(cuid())
   title         String
   description   String
-  status        TicketStatus @default(OPEN)
-  priority      Priority     @default(MEDIUM)
+  status        String       @default("OPEN")
+  priority      String       @default("MEDIUM")
   clientId      String
   client        Client    @relation(fields: [clientId], references: [id])
   equipmentId   String?
@@ -92,7 +92,7 @@ model Ticket {
   assignedTo    User?     @relation("AssignedTickets", fields: [assignedToId], references: [id])
   createdById   String
   createdBy     User      @relation("CreatedTickets", fields: [createdById], references: [id])
-  checklist     Json?     // Almacena el checklist del ticket
+  checklist     String?   // Almacena el checklist del ticket como JSON string
   partsUsed     PartUsage[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -134,30 +134,29 @@ model TimeEntry {
   updatedAt     DateTime  @updatedAt
 }
 
-// Enums
-enum Role {
-  ADMIN
-  TECHNICIAN
-  CLIENT
+// Modelo de Base de Conocimiento (por modelo de equipo)
+model KnowledgeBaseEntry {
+  id          String      @id @default(cuid())
+  modelName   String      @unique // Ej: "Cinta Trotadora Pro X1"
+  description String?
+  checklists  Checklist[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 }
 
-enum ContractType {
-  FIXED_RATE
-  PER_VISIT
-  HYBRID
+// Modelo de Checklist
+model Checklist {
+  id              String             @id @default(cuid())
+  name            String             // Ej: "Mantenimiento Preventivo Mensual"
+  tasks           String             // JSON string: [{ "id": "task1", "text": "Lubricar correa" }]
+  knowledgeBaseId String
+  knowledgeBase   KnowledgeBaseEntry @relation(fields: [knowledgeBaseId], references: [id])
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 }
 
-enum TicketStatus {
-  OPEN
-  IN_PROGRESS
-  WAITING_PARTS
-  WAITING_CLIENT
-  CLOSED
-}
-
-enum Priority {
-  LOW
-  MEDIUM
-  HIGH
-  URGENT
-} 
+// Enums como constantes (para referencia en código)
+// Role: ADMIN, TECHNICIAN, CLIENT
+// ContractType: FIXED_RATE, PER_VISIT, HYBRID
+// TicketStatus: OPEN, IN_PROGRESS, WAITING_PARTS, WAITING_CLIENT, CLOSED
+// Priority: LOW, MEDIUM, HIGH, URGENT 
