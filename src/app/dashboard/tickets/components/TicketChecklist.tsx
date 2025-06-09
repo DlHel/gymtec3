@@ -85,4 +85,6 @@ export function TicketChecklist({ ticketId }: TicketChecklistProps) {
             </CardContent>
         </Card>
     )
-} 
+}
+
+export default TicketChecklist 

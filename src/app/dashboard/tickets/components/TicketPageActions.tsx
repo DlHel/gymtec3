@@ -68,4 +68,6 @@ export function TicketPageActions({ ticketId }: TicketPageActionsProps) {
             </AlertDialog>
         </div>
     )
-} 
+}
+
+export default TicketPageActions 
