@@ -51,7 +51,7 @@ export default async function KnowledgeBasePage() {
                   <CardTitle className="flex items-center gap-2">
                     <HardHat /> {entry.modelName}
                   </CardTitle>
-                  <CardDescription>{entry.manufacturer || "Sin fabricante"}</CardDescription>
+                  <CardDescription>{entry.description || "Sin descripción"}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <p>{entry._count.checklists} checklist(s) disponibles.</p>

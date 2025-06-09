@@ -47,11 +47,11 @@ export async function createPart(prevState: State, formData: FormData): Promise<
     await prisma.part.create({
       data: {
         name,
-        sku,
         stock,
         minStock,
+        sku: sku || null,
         cost: cost || null,
-      },
+      }
     })
   } catch (error) {
     return {

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { EditTicketForm } from "../EditTicketForm";
+import { EditTicketForm } from "@/app/dashboard/tickets/components/EditTicketForm";
 
 export default async function EditTicketPage({ params }: { params: { ticketId: string } }) {
     const { ticketId } = params;

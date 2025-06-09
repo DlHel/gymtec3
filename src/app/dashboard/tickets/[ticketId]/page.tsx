@@ -10,12 +10,27 @@ export default async function TicketDetailsPage({ params }: { params: { ticketId
             assignedTo: true,
             createdBy: true,
             equipment: true,
+            partsUsed: {
+                include: {
+                    part: true
+                }
+            },
+            timeEntries: true,
+            comments: {
+                include: {
+                    user: true
+                }
+            }
         }
+    });
+
+    const availableParts = await prisma.part.findMany({
+        where: { stock: { gt: 0 } }
     });
 
     if (!ticket) {
         notFound();
     }
 
-    return <TicketDetails ticket={ticket} />;
+    return <TicketDetails ticket={ticket} availableParts={availableParts} />;
 } 

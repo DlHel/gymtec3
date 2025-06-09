@@ -25,6 +25,14 @@ export const columns: ColumnDef<EquipmentWithLocationAndClient>[] = [
                 Modelo <ArrowUpDown className="ml-2 h-4 w-4" />
             </Button>
         ),
+        cell: ({ row }) => {
+            const equipment = row.original;
+            return (
+                <Link href={`/dashboard/inventory/equipment/${equipment.id}`} className="hover:underline">
+                    {equipment.model}
+                </Link>
+            )
+        }
     },
     {
         accessorKey: "location.client.name",

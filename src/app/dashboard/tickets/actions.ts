@@ -5,15 +5,16 @@ import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { TicketStatus, TicketPriority } from "@prisma/client"
+import { authOptions } from "@/lib/auth"
+import { TicketStatus, TicketPriority } from "@/types/tickets"
 
 const ticketSchema = z.object({
   title: z.string().min(5, "El título debe tener al menos 5 caracteres."),
   description: z.string().min(10, "La descripción debe tener al menos 10 caracteres."),
-  clientId: z.string().nonempty("Debes seleccionar un cliente."),
-  assignedToId: z.string().optional(),
+  clientId: z.string({ required_error: "Debe seleccionar un cliente." }),
+  status: z.enum(["OPEN", "IN_PROGRESS", "CLOSED", "ON_HOLD"]),
   priority: z.enum(["LOW", "MEDIUM", "HIGH"]),
+  assignedToId: z.string().optional().nullable(),
 })
 
 const TicketSchema = z.object({
@@ -146,5 +147,87 @@ export async function updateTicketChecklistState(ticketId: string, checklistStat
         return { success: true, message: "Progreso del checklist guardado." };
     } catch (error) {
         return { success: false, message: "Error al guardar el progreso." };
+    }
+}
+
+export async function getChecklistsByKnowledgeBaseId(knowledgeBaseId: string) {
+    return prisma.checklist.findMany({
+        where: { knowledgeBaseId },
+        orderBy: { createdAt: 'asc' }
+    });
+}
+
+export async function addPartsToTicket(ticketId: string, parts: { partId: string, quantity: number }[]) {
+    try {
+        for (const part of parts) {
+            const partInStock = await prisma.part.findUnique({
+                where: { id: part.partId }
+            });
+
+            if (!partInStock || partInStock.stock < part.quantity) {
+                throw new Error(`No hay suficiente stock para ${partInStock?.name || 'el repuesto seleccionado'}.`);
+            }
+        }
+
+        const transaction = await prisma.$transaction(async (tx) => {
+            for (const part of parts) {
+                await tx.part.update({
+                    where: { id: part.partId },
+                    data: { stock: { decrement: part.quantity } }
+                });
+
+                await tx.partUsage.create({
+                    data: {
+                        ticketId,
+                        partId: part.partId,
+                        quantity: part.quantity
+                    }
+                });
+            }
+        });
+        
+        revalidatePath(`/dashboard/tickets/${ticketId}`);
+        return { success: true };
+    } catch (error: any) {
+        return { error: error.message };
+    }
+}
+
+export async function addTimeEntry(ticketId: string, data: { hours: number, description?: string }) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) return { error: "No autenticado" };
+
+    try {
+        await prisma.timeEntry.create({
+            data: {
+                ticketId,
+                userId: session.user.id,
+                hours: data.hours,
+                description: data.description,
+            }
+        });
+        revalidatePath(`/dashboard/tickets/${ticketId}`);
+        return { success: true };
+    } catch (error) {
+        return { error: "No se pudo registrar las horas." };
+    }
+}
+
+export async function addComment(ticketId: string, content: string) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) return { error: "No autenticado" };
+
+    try {
+        await prisma.comment.create({
+            data: {
+                ticketId,
+                userId: session.user.id,
+                content,
+            }
+        });
+        revalidatePath(`/dashboard/tickets/${ticketId}`);
+        return { success: true };
+    } catch (error) {
+        return { error: "No se pudo agregar el comentario." };
     }
 } 

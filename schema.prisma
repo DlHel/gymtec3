@@ -13,15 +13,22 @@ datasource db {
 // Modelo de Usuario
 model User {
   id            String    @id @default(cuid())
-  email         String    @unique
   name          String?
-  password      String
-  role          String    @default("TECHNICIAN")
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          String    @default("TECHNICIAN") // ADMIN, TECHNICIAN
+  accounts      Account[]
+  sessions      Session[]
+  
+  // Relations
+  createdTickets Ticket[] @relation("CreatedBy")
+  assignedTickets Ticket[] @relation("AssignedTo")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  tickets       Ticket[]  @relation("AssignedTickets")
-  createdTickets Ticket[] @relation("CreatedTickets")
   timeEntries   TimeEntry[]
+  comments      Comment[]
 }
 
 // Modelo de Cliente
@@ -82,43 +89,50 @@ model Contract {
 
 // Modelo de Ticket
 model Ticket {
-  id            String    @id @default(cuid())
-  title         String
-  description   String
-  status        String       @default("OPEN")
-  priority      String       @default("MEDIUM")
-  clientId      String
-  client        Client    @relation(fields: [clientId], references: [id])
-  equipmentId   String?
-  equipment     Equipment? @relation(fields: [equipmentId], references: [id])
-  assignedToId  String?
-  assignedTo    User?     @relation("AssignedTickets", fields: [assignedToId], references: [id])
-  createdById   String
-  createdBy     User      @relation("CreatedTickets", fields: [createdById], references: [id])
-  checklist     String?   // Almacena el checklist del ticket como JSON string
-  partsUsed     PartUsage[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  checklistState String?
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  title           String
+  description     String
+  status          String   @default("OPEN") // OPEN, IN_PROGRESS, CLOSED, ON_HOLD
+  priority        String   @default("MEDIUM") // LOW, MEDIUM, HIGH
+  checklistState  String?
+
+  // Relations
+  client          Client    @relation(fields: [clientId], references: [id])
+  clientId        String
+  createdBy       User      @relation("CreatedBy", fields: [createdById], references: [id])
+  createdById     String
+  assignedTo      User?     @relation("AssignedTo", fields: [assignedToId], references: [id])
+  assignedToId    String?
+  equipment       Equipment? @relation(fields: [equipmentId], references: [id])
+  equipmentId     String?
+  partsUsed       PartUsage[]
+  timeEntries     TimeEntry[]
+  comments        Comment[]
 }
 
 // Modelo de Uso de Repuestos
 model PartUsage {
-  id            String    @id @default(cuid())
-  ticketId      String
-  ticket        Ticket    @relation(fields: [ticketId], references: [id])
-  partId        String
-  part          Part      @relation(fields: [partId], references: [id])
-  quantity      Int
-  createdAt     DateTime  @default(now())
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  quantity  Int
+  
+  // Relations
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  ticketId  String
+  part      Part     @relation(fields: [partId], references: [id])
+  partId    String
+
+  @@unique([ticketId, partId])
 }
 
 // Modelo de Repuesto
 model Part {
   id            String    @id @default(cuid())
   name          String
-  sku           String    @unique
-  cost          Float
+  sku           String?   @unique
+  cost          Float?
   stock         Int
   minStock      Int
   usages        PartUsage[]
@@ -128,14 +142,16 @@ model Part {
 
 // Modelo de Registro de Tiempo
 model TimeEntry {
-  id            String    @id @default(cuid())
-  userId        String
-  user          User      @relation(fields: [userId], references: [id])
-  startTime     DateTime
-  endTime       DateTime?
-  description   String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  hours       Float
+  description String?
+
+  // Relations
+  ticket      Ticket   @relation(fields: [ticketId], references: [id])
+  ticketId    String
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
 }
 
 // Modelo de Base de Conocimiento (por modelo de equipo)
@@ -163,4 +179,51 @@ model Checklist {
 // Role: ADMIN, TECHNICIAN, CLIENT
 // ContractType: FIXED_RATE, PER_VISIT, HYBRID
 // TicketStatus: OPEN, IN_PROGRESS, WAITING_PARTS, WAITING_CLIENT, CLOSED
-// Priority: LOW, MEDIUM, HIGH, URGENT 
+// Priority: LOW, MEDIUM, HIGH, URGENT
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String? 
+  access_token       String? 
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String? 
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  content   String
+
+  // Relations
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  ticketId  String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+} 

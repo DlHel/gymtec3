@@ -4,6 +4,25 @@ const prisma = new PrismaClient()
 
 async function main() {
   console.log('🌱 Iniciando seed de la base de datos...')
+  
+  // Limpiar la base de datos
+  await prisma.partUsage.deleteMany();
+  await prisma.comment.deleteMany();
+  await prisma.timeEntry.deleteMany();
+  await prisma.ticket.deleteMany();
+  await prisma.checklist.deleteMany();
+  await prisma.knowledgeBaseEntry.deleteMany();
+  await prisma.part.deleteMany();
+  await prisma.equipment.deleteMany();
+  await prisma.location.deleteMany();
+  await prisma.contract.deleteMany();
+  await prisma.client.deleteMany();
+  await prisma.account.deleteMany();
+  await prisma.session.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.verificationToken.deleteMany();
+
+  console.log('🧹 Base de datos limpiada...')
 
   // Crear usuarios
   const adminUser = await prisma.user.create({
@@ -183,7 +202,7 @@ async function main() {
       equipmentId: equipment1.id,
       assignedToId: techUser.id,
       createdById: adminUser.id,
-      checklist: JSON.stringify([
+      checklistState: JSON.stringify([
         { task: 'Lubricar correa', completed: true },
         { task: 'Revisar motor', completed: false },
         { task: 'Calibrar sensores', completed: false },
@@ -199,7 +218,13 @@ async function main() {
       priority: 'HIGH',
       clientId: client1.id,
       equipmentId: equipment2.id,
+      assignedToId: techUser.id,
       createdById: adminUser.id,
+      checklistState: JSON.stringify([
+        { task: 'Lubricar correa', completed: true },
+        { task: 'Revisar motor', completed: false },
+        { task: 'Calibrar sensores', completed: false },
+      ]),
     },
   })
 
@@ -220,9 +245,9 @@ async function main() {
   await prisma.timeEntry.create({
     data: {
       userId: techUser.id,
-      startTime: new Date('2024-06-09T08:00:00'),
-      endTime: new Date('2024-06-09T12:00:00'),
-      description: 'Mantenimiento preventivo equipos sede principal',
+      ticketId: ticket1.id,
+      hours: 4,
+      description: "Mantenimiento preventivo equipos sede principal",
     },
   })
 

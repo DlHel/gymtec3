@@ -6,6 +6,11 @@ import { Equipment, Location, Client } from "@prisma/client"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { PlusCircle } from "lucide-react"
+import {
+  Table,
+  TableRow,
+} from "@/components/ui/table"
+import { Input } from "@/components/ui/input"
 
 type EquipmentWithLocationAndClient = Equipment & {
     location: Location & {

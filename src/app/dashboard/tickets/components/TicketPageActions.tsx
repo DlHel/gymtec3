@@ -3,71 +3,45 @@
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Pencil, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { Ticket } from "@prisma/client"
+import { DeleteConfirmationDialog } from "@/components/modules/DeleteConfirmationDialog"
+import { deleteTicket } from "@/app/dashboard/tickets/actions"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 
 interface TicketPageActionsProps {
-    ticketId: string
+    ticket: Ticket
 }
 
-export function TicketPageActions({ ticketId }: TicketPageActionsProps) {
-    const router = useRouter()
-    const [isDeleting, setIsDeleting] = useState(false)
+export function TicketPageActions({ ticket }: TicketPageActionsProps) {
+    const router = useRouter();
 
     const handleDelete = async () => {
-        try {
-            setIsDeleting(true)
-            // Aquí iría la llamada a deleteTicket cuando esté implementada
-            // await deleteTicket(ticketId)
-            toast.success('Ticket eliminado exitosamente')
-            router.push('/dashboard/tickets')
-        } catch (error) {
-            toast.error('Error al eliminar el ticket')
-        } finally {
-            setIsDeleting(false)
+        const result = await deleteTicket(ticket.id);
+        if (result.message.startsWith("Error")) {
+            toast.error(result.message);
+        } else {
+            toast.success(result.message);
+            router.push("/dashboard/tickets");
         }
+        return result;
     }
 
     return (
-        <div className="flex gap-2">
-            <Link href={`/dashboard/tickets/edit/${ticketId}`}>
-                <Button variant="outline" size="sm">
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Editar
+        <div className="flex items-center gap-2">
+            <Link href={`/dashboard/tickets/edit/${ticket.id}`}>
+                <Button>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Editar Ticket
                 </Button>
             </Link>
-            
-            <AlertDialog>
-                <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="sm">
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Eliminar
-                    </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Esta acción no se puede deshacer. Esto eliminará permanentemente 
-                            el ticket y todos sus datos asociados.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction 
-                            onClick={handleDelete}
-                            disabled={isDeleting}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                            {isDeleting ? 'Eliminando...' : 'Eliminar'}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            <DeleteConfirmationDialog onConfirm={handleDelete} itemName={ticket.title}>
+                <Button variant="destructive">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Eliminar
+                </Button>
+            </DeleteConfirmationDialog>
         </div>
     )
-}
-
-export default TicketPageActions 
+} 

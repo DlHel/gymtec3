@@ -8,18 +8,19 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Equipment, Client } from "@prisma/client"
+import { Equipment, Client, Location } from "@prisma/client"
 
 interface EquipmentFormProps {
-    clients: Client[]
-    equipment?: Equipment
+    equipment?: Equipment;
+    clients: (Client & { locations: Location[] })[];
 }
 
-export function EquipmentForm({ clients, equipment }: EquipmentFormProps) {
-    const isEditing = !!equipment;
+export function EquipmentForm({ equipment, clients }: EquipmentFormProps) {
     const initialState: State = { message: null, errors: {} };
-    const action = isEditing ? updateEquipment.bind(null, equipment.id) : createEquipment;
+    const action = equipment ? updateEquipment.bind(null, equipment.id) : createEquipment;
     const [state, formAction] = useFormState(action, initialState);
+
+    const allLocations = clients.flatMap(client => client.locations.map(loc => ({ ...loc, clientName: client.name })));
 
     const formatDateForInput = (date: Date | null | undefined) => {
         if (!date) return ''
@@ -34,9 +35,9 @@ export function EquipmentForm({ clients, equipment }: EquipmentFormProps) {
         <form action={formAction}>
             <Card>
                 <CardHeader>
-                    <CardTitle>{isEditing ? "Editar" : "Crear"} Equipo</CardTitle>
+                    <CardTitle>{equipment ? "Editar" : "Crear"} Equipo</CardTitle>
                     <CardDescription>
-                        {isEditing ? "Modifique los detalles del equipo." : "Rellene los datos para registrar un nuevo equipo."}
+                        {equipment ? "Modifique los detalles del equipo." : "Rellene los datos para registrar un nuevo equipo."}
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -57,18 +58,20 @@ export function EquipmentForm({ clients, equipment }: EquipmentFormProps) {
                         <Input id="serialNumber" name="serialNumber" defaultValue={equipment?.serialNumber ?? ''} />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="clientId">Asociar a Cliente</Label>
-                        <Select name="clientId" defaultValue={equipment?.clientId}>
+                        <Label htmlFor="locationId">Sede (Ubicación)</Label>
+                        <Select name="locationId" defaultValue={equipment?.locationId}>
                             <SelectTrigger>
-                                <SelectValue placeholder="Seleccione un cliente" />
+                                <SelectValue placeholder="Seleccione una sede" />
                             </SelectTrigger>
                             <SelectContent>
-                                {clients.map(client => (
-                                    <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                                {allLocations.map(location => (
+                                    <SelectItem key={location.id} value={location.id}>
+                                        {location.clientName} - {location.name}
+                                    </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
-                        {state.errors?.clientId && <p className="text-sm text-red-500">{state.errors.clientId}</p>}
+                        {state.errors?.locationId && <p className="text-sm text-red-500">{state.errors.locationId[0]}</p>}
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
@@ -85,7 +88,7 @@ export function EquipmentForm({ clients, equipment }: EquipmentFormProps) {
                     <Link href="/dashboard/inventory/equipment">
                         <Button variant="outline">Cancelar</Button>
                     </Link>
-                    <Button type="submit">{isEditing ? "Guardar Cambios" : "Crear Equipo"}</Button>
+                    <Button type="submit">{equipment ? "Guardar Cambios" : "Crear Equipo"}</Button>
                 </CardFooter>
             </Card>
             {state.message && <p className="text-sm text-red-500 mt-4">{state.message}</p>}

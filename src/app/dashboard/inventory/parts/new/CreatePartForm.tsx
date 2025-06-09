@@ -1,7 +1,7 @@
 "use client"
 
 import { useFormState } from "react-dom"
-import { createPart, type State } from "../actions"
+import { createPart, type State } from "@/app/dashboard/inventory/parts/actions"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"

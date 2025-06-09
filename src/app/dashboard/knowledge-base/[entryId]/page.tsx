@@ -31,14 +31,14 @@ export default async function KnowledgeBaseDetailPage({ params }: KnowledgeBaseD
                 <div className="flex justify-between items-start mb-6">
                     <div>
                         <h1 className="text-3xl font-bold">{entry.modelName}</h1>
-                        <p className="text-muted-foreground">{entry.manufacturer}</p>
+                        <p className="text-muted-foreground">{entry.description}</p>
                     </div>
+                    <CreateChecklistDialog knowledgeBaseId={entry.id} />
                 </div>
 
                 <div className="mt-8">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-2xl font-bold">Checklists</h2>
-                        <CreateChecklistDialog knowledgeBaseId={entry.id} />
                     </div>
 
                     <div className="space-y-4">
