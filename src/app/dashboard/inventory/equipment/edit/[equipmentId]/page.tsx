@@ -12,7 +12,15 @@ export default async function EditEquipmentPage({ params }: { params: { equipmen
         prisma.equipment.findUnique({
             where: { id: equipmentId },
             include: {
-                tickets: true,
+                tickets: {
+                    include: {
+                        client: true,
+                        assignedTo: true,
+                    },
+                     orderBy: {
+                        createdAt: 'desc'
+                    }
+                },
             }
         }),
         prisma.client.findMany({

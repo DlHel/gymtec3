@@ -9,7 +9,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import Link from "next/link"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Ticket, Client, User, TicketStatus, TicketPriority } from "@prisma/client"
+import { Ticket, Client, User } from "@prisma/client"
+import { TicketStatus, TicketPriority } from "@/types/tickets"
 
 interface EditTicketFormProps {
     ticket: Ticket

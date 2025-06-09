@@ -33,7 +33,7 @@ export default async function EquipmentDetailsPage({ params }: { params: { equip
             <div className="flex justify-between items-start mb-6">
                 <div>
                     <h1 className="text-3xl font-bold">{equipment.model}</h1>
-                    <p className="text-muted-foreground">{equipment.manufacturer}</p>
+                    <p className="text-muted-foreground">{equipment.brand}</p>
                 </div>
                 <Link href={`/dashboard/inventory/equipment/edit/${equipment.id}`}>
                     <Button>
@@ -61,12 +61,6 @@ export default async function EquipmentDetailsPage({ params }: { params: { equip
                         </CardHeader>
                         <CardContent className="space-y-3">
                             <div>
-                                <h4 className="font-semibold">Estado</h4>
-                                <Badge variant={equipment.status === 'ACTIVE' ? 'default' : 'destructive'}>
-                                    {equipment.status}
-                                </Badge>
-                            </div>
-                            <div>
                                 <h4 className="font-semibold">Cliente</h4>
                                 <p>{equipment.location?.client.name ?? 'No asignado'}</p>
                             </div>
@@ -81,10 +75,6 @@ export default async function EquipmentDetailsPage({ params }: { params: { equip
                             <div>
                                 <h4 className="font-semibold">Fecha de Instalación</h4>
                                 <p>{equipment.installationDate ? new Date(equipment.installationDate).toLocaleDateString() : 'N/A'}</p>
-                            </div>
-                             <div>
-                                <h4 className="font-semibold">Garantía hasta</h4>
-                                <p>{equipment.warrantyEndDate ? new Date(equipment.warrantyEndDate).toLocaleDateString() : 'N/A'}</p>
                             </div>
                         </CardContent>
                     </Card>

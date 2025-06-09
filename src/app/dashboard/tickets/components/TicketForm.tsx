@@ -21,6 +21,7 @@ import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { createTicket } from "../actions"
 import { useState } from "react"
+import { TicketPriority } from "@/types/tickets"
 
 // Esquema de validación con Zod
 const formSchema = z.object({
@@ -28,7 +29,7 @@ const formSchema = z.object({
   description: z.string().min(10, "La descripción debe tener al menos 10 caracteres."),
   clientId: z.string().nonempty("Debes seleccionar un cliente."),
   assignedToId: z.string().optional(),
-  priority: z.enum(["LOW", "MEDIUM", "HIGH"]),
+  priority: z.nativeEnum(TicketPriority),
 })
 
 interface TicketFormProps {
@@ -46,7 +47,7 @@ export default function TicketForm({ clients, users }: TicketFormProps) {
       description: "",
       clientId: "",
       assignedToId: "",
-      priority: "MEDIUM",
+      priority: TicketPriority.MEDIUM,
     },
   })
 
@@ -143,9 +144,9 @@ export default function TicketForm({ clients, users }: TicketFormProps) {
                     </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                        <SelectItem value="LOW">Baja</SelectItem>
-                        <SelectItem value="MEDIUM">Media</SelectItem>
-                        <SelectItem value="HIGH">Alta</SelectItem>
+                        {Object.values(TicketPriority).map(p => (
+                            <SelectItem key={p} value={p}>{p}</SelectItem>
+                        ))}
                     </SelectContent>
                 </Select>
                 <FormMessage />

@@ -45,7 +45,13 @@ export default function TicketDetails({ ticket, availableParts }: TicketDetailsP
                                 <p className="text-gray-700 whitespace-pre-wrap">{ticket.description ?? ''}</p>
                             </CardContent>
                         </Card>
-                        <TicketChecklist ticket={ticket} />
+                        {ticket.equipment && (
+                            <TicketChecklist 
+                                ticketId={ticket.id} 
+                                modelName={ticket.equipment.model} 
+                                initialChecklistStateJSON={ticket.checklistState} 
+                            />
+                        )}
                         <Card>
                             <CardHeader>
                                 <CardTitle>Uso de Repuestos</CardTitle>

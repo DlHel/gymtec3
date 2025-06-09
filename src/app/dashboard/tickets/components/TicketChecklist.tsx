@@ -60,7 +60,8 @@ export function TicketChecklist({ modelName, ticketId, initialChecklistStateJSON
         });
     };
 
-    const checklistItems = Array.isArray(selectedChecklist?.items) ? selectedChecklist?.items : [];
+    const tasks = selectedChecklist?.tasks ? JSON.parse(selectedChecklist.tasks) : [];
+    const checklistItems = Array.isArray(tasks) ? tasks : [];
 
     if (isLoading) {
         return <Card><CardHeader><CardTitle>Cargando Checklists...</CardTitle></CardHeader></Card>
@@ -77,13 +78,13 @@ export function TicketChecklist({ modelName, ticketId, initialChecklistStateJSON
                     <span>Checklist de Trabajo</span>
                     {isPending && <Loader className="animate-spin h-5 w-5" />}
                 </CardTitle>
-                 <Select onValueChange={handleChecklistChange}>
+                 <Select onValueChange={handleChecklistChange} value={selectedChecklist?.id || ""}>
                     <SelectTrigger>
-                        <SelectValue placeholder="Seleccione un checklist..." />
+                        <SelectValue placeholder="Seleccionar un checklist..." />
                     </SelectTrigger>
                     <SelectContent>
                         {checklists.map(c => (
-                            <SelectItem key={c.id} value={c.id}>{c.title} ({c.type})</SelectItem>
+                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                         ))}
                     </SelectContent>
                 </Select>

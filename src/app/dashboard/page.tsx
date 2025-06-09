@@ -1,19 +1,34 @@
 import { prisma } from "@/lib/prisma";
 import { StatCard } from "@/components/modules/StatCard";
 import { Users, Ticket, Wrench, HardHat } from "lucide-react";
+import RecentTickets from "@/app/dashboard/components/RecentTickets";
+import LowStockParts from "@/app/dashboard/components/LowStockParts";
 
 export default async function DashboardPage() {
 
-    // Obtener partes con bajo stock usando una consulta SQL cruda
-    const lowStockPartsResult = await prisma.$queryRaw<[{count: bigint}]>`
-        SELECT COUNT(*) as count FROM "Part" WHERE stock <= minStock
-    `;
-    const lowStockParts = Number(lowStockPartsResult[0].count);
-
-    const [totalClients, openTickets, totalEquipment] = await Promise.all([
+    const [totalClients, openTickets, totalEquipment, lowStockParts, recentTickets] = await Promise.all([
         prisma.client.count(),
         prisma.ticket.count({ where: { status: { in: ['OPEN', 'IN_PROGRESS'] } } }),
         prisma.equipment.count(),
+        prisma.part.findMany({
+            where: {
+                stock: {
+                    lte: prisma.part.fields.minStock
+                }
+            },
+            orderBy: {
+                stock: 'asc'
+            }
+        }),
+        prisma.ticket.findMany({
+            take: 5,
+            orderBy: {
+                createdAt: 'desc'
+            },
+            include: {
+                client: true,
+            }
+        })
     ]);
 
     return (
@@ -34,7 +49,7 @@ export default async function DashboardPage() {
                 />
                 <StatCard
                     title="Repuestos con Bajo Stock"
-                    value={lowStockParts}
+                    value={lowStockParts.length}
                     icon={Wrench}
                     description="Items que necesitan ser reabastecidos"
                 />
@@ -46,11 +61,14 @@ export default async function DashboardPage() {
                 />
             </div>
 
-            <div className="mt-8">
-                {/* Aquí podríamos añadir gráficos o tablas de actividad reciente en el futuro */}
-                <h2 className="text-2xl font-semibold mb-4">Actividad Reciente</h2>
-                <div className="p-6 bg-white rounded-lg shadow-md border text-center text-muted-foreground">
-                    Próximamente: Gráficos y registros de actividad.
+            <div className="mt-10 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div>
+                    <h2 className="text-2xl font-semibold mb-4">Tickets Recientes</h2>
+                    <RecentTickets tickets={recentTickets} />
+                </div>
+                <div>
+                    <h2 className="text-2xl font-semibold mb-4">Repuestos por Agotarse</h2>
+                    <LowStockParts parts={lowStockParts} />
                 </div>
             </div>
         </div>

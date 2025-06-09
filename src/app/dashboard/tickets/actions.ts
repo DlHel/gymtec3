@@ -159,18 +159,16 @@ export async function getChecklistsByKnowledgeBaseId(knowledgeBaseId: string) {
 
 export async function addPartsToTicket(ticketId: string, parts: { partId: string, quantity: number }[]) {
     try {
-        for (const part of parts) {
-            const partInStock = await prisma.part.findUnique({
-                where: { id: part.partId }
-            });
-
-            if (!partInStock || partInStock.stock < part.quantity) {
-                throw new Error(`No hay suficiente stock para ${partInStock?.name || 'el repuesto seleccionado'}.`);
-            }
-        }
-
-        const transaction = await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx) => {
             for (const part of parts) {
+                const partInStock = await tx.part.findUnique({
+                    where: { id: part.partId }
+                });
+
+                if (!partInStock || partInStock.stock < part.quantity) {
+                    throw new Error(`Stock insuficiente para "${partInStock?.name || part.partId}". Disponible: ${partInStock?.stock || 0}, Solicitado: ${part.quantity}.`);
+                }
+
                 await tx.part.update({
                     where: { id: part.partId },
                     data: { stock: { decrement: part.quantity } }
