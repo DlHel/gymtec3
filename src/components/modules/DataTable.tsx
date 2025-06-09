@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -28,13 +29,18 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
   searchKey?: string
+  newButton?: React.ReactNode
+  onRowClick?: (row: TData) => string
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
-  searchKey
+  searchKey,
+  newButton,
+  onRowClick
 }: DataTableProps<TData, TValue>) {
+  const router = useRouter()
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
@@ -57,6 +63,13 @@ export function DataTable<TData, TValue>({
 
   const filterColumn = searchKey || (columns[0] as any)?.accessorKey;
 
+  const handleRowClick = (row: any) => {
+    if (onRowClick) {
+      const href = onRowClick(row.original)
+      router.push(href)
+    }
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between py-4">
@@ -68,9 +81,7 @@ export function DataTable<TData, TValue>({
           }
           className="max-w-sm"
         />
-        <Button>
-          Nuevo Cliente
-        </Button>
+        {newButton}
       </div>
       <div className="rounded-md border">
         <Table>
@@ -98,6 +109,8 @@ export function DataTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
+                  onClick={() => handleRowClick(row)}
+                  className={onRowClick ? "cursor-pointer" : ""}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>

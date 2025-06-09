@@ -54,14 +54,17 @@ model Location {
 
 // Modelo de Equipo
 model Equipment {
-  id            String    @id @default(cuid())
-  model         String
-  serialNumber  String    @unique
-  locationId    String
-  location      Location  @relation(fields: [locationId], references: [id])
-  tickets       Ticket[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  model            String
+  brand            String
+  serialNumber     String?   @unique
+  purchaseDate     DateTime?
+  installationDate DateTime?
+  locationId       String
+  location         Location  @relation(fields: [locationId], references: [id])
+  tickets          Ticket[]
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 }
 
 // Modelo de Contrato
@@ -96,6 +99,7 @@ model Ticket {
   partsUsed     PartUsage[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  checklistState String?
 }
 
 // Modelo de Uso de Repuestos

@@ -19,9 +19,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={`${inter.className} antialiased min-h-screen bg-white text-gray-900`}>
         <AuthProvider>
-          <main>{children}</main>
+          <main className="min-h-screen">
+            {children}
+          </main>
           <Toaster />
         </AuthProvider>
       </body>

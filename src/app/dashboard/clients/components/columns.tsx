@@ -56,18 +56,7 @@ export const columns: ColumnDef<Client>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(client.rut)}
-            >
-              Copiar RUT
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <Link href={`/dashboard/clients/${client.id}`}>
-              <DropdownMenuItem>
-                Ver detalles
-              </DropdownMenuItem>
-            </Link>
-            <DropdownMenuItem>Editar cliente</DropdownMenuItem>
+            <DropdownMenuItem>Editar Cliente</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )

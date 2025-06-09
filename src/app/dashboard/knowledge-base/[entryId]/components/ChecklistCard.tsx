@@ -29,7 +29,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import DeleteChecklistDialog from "./DeleteChecklistDialog"
+
 import { useState } from "react"
 import ChecklistForm from "./ChecklistForm"
 
@@ -45,7 +45,6 @@ type Task = {
 
 export default function ChecklistCard({ checklist, knowledgeBaseId }: ChecklistCardProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const tasks: Task[] = JSON.parse(checklist.tasks)
 
   async function handleDelete() {
@@ -83,18 +82,27 @@ export default function ChecklistCard({ checklist, knowledgeBaseId }: ChecklistC
               </DialogContent>
             </Dialog>
 
-            <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <DialogTrigger asChild>
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
                     <Button variant="ghost" size="icon">
                         <Trash2 className="w-5 h-5 text-destructive" />
                     </Button>
-                </DialogTrigger>
-                <DeleteChecklistDialog
-                    checklistId={checklist.id}
-                    knowledgeBaseId={knowledgeBaseId}
-                    setOpen={setIsDeleteDialogOpen}
-                />
-            </Dialog>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta acción no se puede deshacer. Esto eliminará permanentemente el checklist.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete}>
+                            Eliminar
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
           </div>
         </div>

@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Trash2, PlusCircle } from "lucide-react"
-import { createChecklist, updateChecklist } from "./actions"
+import { createChecklist, updateChecklist } from "../actions"
 import { toast } from "sonner"
 import { Checklist } from "@prisma/client"
 

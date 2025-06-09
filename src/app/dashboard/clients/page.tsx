@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma"
-import { columns } from "./components/columns"
-import { DataTable } from "@/components/modules/DataTable"
+import ClientsDataTable from "./components/ClientsDataTable"
 
 export default async function ClientsPage() {
   const clients = await prisma.client.findMany()
@@ -11,7 +10,7 @@ export default async function ClientsPage() {
       <p className="text-gray-600 mb-8">
         Aquí puedes ver, buscar y gestionar todos los clientes de Gymtec.
       </p>
-      <DataTable columns={columns} data={clients} searchKey="name" />
+      <ClientsDataTable clients={clients} />
     </div>
   )
 } 

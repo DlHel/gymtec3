@@ -83,6 +83,7 @@ async function main() {
   const equipment1 = await prisma.equipment.create({
     data: {
       model: 'Cinta Trotadora Pro X1',
+      brand: 'Gymtec',
       serialNumber: 'CT-001-2024',
       locationId: location1.id,
     },
@@ -91,6 +92,7 @@ async function main() {
   const equipment2 = await prisma.equipment.create({
     data: {
       model: 'Bicicleta Estática Elite',
+      brand: 'Gymtec',
       serialNumber: 'BE-002-2024',
       locationId: location1.id,
     },
@@ -99,6 +101,7 @@ async function main() {
   const equipment3 = await prisma.equipment.create({
     data: {
       model: 'Elíptica Advanced',
+      brand: 'Gymtec',
       serialNumber: 'EL-003-2024',
       locationId: location2.id,
     },

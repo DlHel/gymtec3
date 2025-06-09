@@ -1,0 +1,94 @@
+"use client"
+
+import { useFormState } from "react-dom"
+import { createEquipment, updateEquipment, type State } from "../actions"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import Link from "next/link"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Equipment, Client } from "@prisma/client"
+
+interface EquipmentFormProps {
+    clients: Client[]
+    equipment?: Equipment
+}
+
+export function EquipmentForm({ clients, equipment }: EquipmentFormProps) {
+    const isEditing = !!equipment;
+    const initialState: State = { message: null, errors: {} };
+    const action = isEditing ? updateEquipment.bind(null, equipment.id) : createEquipment;
+    const [state, formAction] = useFormState(action, initialState);
+
+    const formatDateForInput = (date: Date | null | undefined) => {
+        if (!date) return ''
+        const d = new Date(date)
+        const year = d.getFullYear()
+        const month = String(d.getMonth() + 1).padStart(2, '0')
+        const day = String(d.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
+    }
+
+    return (
+        <form action={formAction}>
+            <Card>
+                <CardHeader>
+                    <CardTitle>{isEditing ? "Editar" : "Crear"} Equipo</CardTitle>
+                    <CardDescription>
+                        {isEditing ? "Modifique los detalles del equipo." : "Rellene los datos para registrar un nuevo equipo."}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="brand">Marca</Label>
+                            <Input id="brand" name="brand" defaultValue={equipment?.brand} required />
+                            {state.errors?.brand && <p className="text-sm text-red-500">{state.errors.brand}</p>}
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="model">Modelo</Label>
+                            <Input id="model" name="model" defaultValue={equipment?.model} required />
+                            {state.errors?.model && <p className="text-sm text-red-500">{state.errors.model}</p>}
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="serialNumber">Número de Serie (Opcional)</Label>
+                        <Input id="serialNumber" name="serialNumber" defaultValue={equipment?.serialNumber ?? ''} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="clientId">Asociar a Cliente</Label>
+                        <Select name="clientId" defaultValue={equipment?.clientId}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Seleccione un cliente" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {clients.map(client => (
+                                    <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        {state.errors?.clientId && <p className="text-sm text-red-500">{state.errors.clientId}</p>}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="purchaseDate">Fecha de Compra</Label>
+                            <Input id="purchaseDate" name="purchaseDate" type="date" defaultValue={formatDateForInput(equipment?.purchaseDate)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="installationDate">Fecha de Instalación</Label>
+                            <Input id="installationDate" name="installationDate" type="date" defaultValue={formatDateForInput(equipment?.installationDate)} />
+                        </div>
+                    </div>
+                </CardContent>
+                <CardFooter className="flex justify-between">
+                    <Link href="/dashboard/inventory/equipment">
+                        <Button variant="outline">Cancelar</Button>
+                    </Link>
+                    <Button type="submit">{isEditing ? "Guardar Cambios" : "Crear Equipo"}</Button>
+                </CardFooter>
+            </Card>
+            {state.message && <p className="text-sm text-red-500 mt-4">{state.message}</p>}
+        </form>
+    )
+} 

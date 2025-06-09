@@ -2,92 +2,51 @@
 
 import { ColumnDef } from "@tanstack/react-table"
 import { Part } from "@prisma/client"
-import { ArrowUpDown, MoreHorizontal, AlertTriangle } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Badge } from "@/components/ui/badge"
+import { CellActions } from "./CellActions"
 
-const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-CL", {
-      style: "currency",
-      currency: "CLP",
-    }).format(amount)
-  }
-
+// Definir las columnas de la tabla de repuestos
 export const columns: ColumnDef<Part>[] = [
   {
     accessorKey: "name",
-    header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Nombre
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
+    header: "Nombre",
   },
   {
     accessorKey: "sku",
     header: "SKU",
+    cell: ({ row }) => {
+      const sku = row.getValue("sku")
+      return sku ? <span className="font-mono text-sm">{sku as string}</span> : <span className="text-muted-foreground">N/A</span>
+    },
+  },
+  {
+    accessorKey: "stock",
+    header: "Stock",
+    cell: ({ row }) => {
+      const stock = row.getValue("stock") as number
+      const minStock = row.original.minStock
+      
+      return (
+        <Badge variant={stock <= minStock ? "destructive" : "secondary"}>
+          {stock}
+        </Badge>
+      )
+    },
+  },
+  {
+    accessorKey: "minStock", 
+    header: "Stock Mínimo",
   },
   {
     accessorKey: "cost",
     header: "Costo",
-    cell: ({ row }) => formatCurrency(row.original.cost),
-  },
-  {
-    accessorKey: "stock",
-    header: "Stock Actual",
     cell: ({ row }) => {
-        const part = row.original
-        const isLowStock = part.stock <= part.minStock
-        return (
-            <div className="flex items-center">
-                <span>{part.stock}</span>
-                {isLowStock && <AlertTriangle className="ml-2 h-4 w-4 text-red-500" />}
-            </div>
-        )
-    }
-  },
-  {
-    accessorKey: "minStock",
-    header: "Stock Mínimo",
+      const cost = row.getValue("cost") as number
+      return cost ? `$${cost.toLocaleString()}` : <span className="text-muted-foreground">N/A</span>
+    },
   },
   {
     id: "actions",
-    cell: ({ row }) => {
-      const part = row.original
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Abrir menú</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(part.sku)}
-            >
-              Copiar SKU
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>Editar repuesto</DropdownMenuItem>
-            <DropdownMenuItem>Ver movimientos</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )
-    },
+    cell: ({ row }) => <CellActions part={row.original} />,
   },
 ] 
