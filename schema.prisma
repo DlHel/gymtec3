@@ -1,0 +1,163 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Modelo de Usuario
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String
+  role          Role      @default(TECHNICIAN)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  tickets       Ticket[]  @relation("AssignedTickets")
+  createdTickets Ticket[] @relation("CreatedTickets")
+  timeEntries   TimeEntry[]
+}
+
+// Modelo de Cliente
+model Client {
+  id            String    @id @default(cuid())
+  name          String
+  rut           String    @unique
+  email         String
+  phone         String?
+  address       String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  locations     Location[]
+  contracts     Contract[]
+  tickets       Ticket[]
+}
+
+// Modelo de Ubicación (Sedes)
+model Location {
+  id            String    @id @default(cuid())
+  name          String
+  address       String
+  phone         String?
+  clientId      String
+  client        Client    @relation(fields: [clientId], references: [id])
+  equipment     Equipment[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// Modelo de Equipo
+model Equipment {
+  id            String    @id @default(cuid())
+  model         String
+  serialNumber  String    @unique
+  locationId    String
+  location      Location  @relation(fields: [locationId], references: [id])
+  tickets       Ticket[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// Modelo de Contrato
+model Contract {
+  id            String    @id @default(cuid())
+  clientId      String
+  client        Client    @relation(fields: [clientId], references: [id])
+  type          ContractType
+  startDate     DateTime
+  endDate       DateTime?
+  sla           Json      // Almacena los términos del SLA
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// Modelo de Ticket
+model Ticket {
+  id            String    @id @default(cuid())
+  title         String
+  description   String
+  status        TicketStatus @default(OPEN)
+  priority      Priority     @default(MEDIUM)
+  clientId      String
+  client        Client    @relation(fields: [clientId], references: [id])
+  equipmentId   String?
+  equipment     Equipment? @relation(fields: [equipmentId], references: [id])
+  assignedToId  String?
+  assignedTo    User?     @relation("AssignedTickets", fields: [assignedToId], references: [id])
+  createdById   String
+  createdBy     User      @relation("CreatedTickets", fields: [createdById], references: [id])
+  checklist     Json?     // Almacena el checklist del ticket
+  partsUsed     PartUsage[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// Modelo de Uso de Repuestos
+model PartUsage {
+  id            String    @id @default(cuid())
+  ticketId      String
+  ticket        Ticket    @relation(fields: [ticketId], references: [id])
+  partId        String
+  part          Part      @relation(fields: [partId], references: [id])
+  quantity      Int
+  createdAt     DateTime  @default(now())
+}
+
+// Modelo de Repuesto
+model Part {
+  id            String    @id @default(cuid())
+  name          String
+  sku           String    @unique
+  cost          Float
+  stock         Int
+  minStock      Int
+  usages        PartUsage[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// Modelo de Registro de Tiempo
+model TimeEntry {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  startTime     DateTime
+  endTime       DateTime?
+  description   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// Enums
+enum Role {
+  ADMIN
+  TECHNICIAN
+  CLIENT
+}
+
+enum ContractType {
+  FIXED_RATE
+  PER_VISIT
+  HYBRID
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_PARTS
+  WAITING_CLIENT
+  CLOSED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+} 
