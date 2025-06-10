@@ -29,7 +29,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
   initialData,
   onClose,
 }) => {
-  const initialState = { message: null, errors: {} }
+  const initialState = { message: "", errors: {} }
   const updateClientWithId = updateClient.bind(null, initialData.id)
   const [state, dispatch] = useFormState(updateClientWithId, initialState)
   const [address, setAddress] = useState(initialData.address || '')

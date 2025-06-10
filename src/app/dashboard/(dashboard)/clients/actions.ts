@@ -1,12 +1,13 @@
 'use server'
 
 import { z } from 'zod'
-import { auth } from '@/lib/auth'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 
 export async function getClients() {
-  const session = await auth()
+  const session = await getServerSession(authOptions)
 
   if (!session?.user) {
     // O manejar el error como sea apropiado
@@ -35,7 +36,7 @@ export async function getClients() {
       distinct: ['clientId'],
     })
 
-    const clientIds = tickets.map((ticket) => ticket.clientId)
+    const clientIds = tickets.map((ticket: { clientId: string }) => ticket.clientId)
 
     const clients = await prisma.client.findMany({
       where: {
@@ -60,7 +61,11 @@ export async function getClientDetails(clientId: string) {
     where: { id: clientId },
     include: {
       locations: true,
-      contracts: true,
+      contracts: {
+        include: {
+          sla: true
+        }
+      },
       tickets: {
         orderBy: {
           createdAt: 'desc',
@@ -99,18 +104,45 @@ const clientSchema = z.object({
   address: z.string().optional(),
 })
 
-export async function updateClient(id: string, data: unknown) {
-  const validatedFields = clientSchema.safeParse(data);
+export async function updateClient(
+  id: string, // Pre-filled by .bind()
+  prevState: { message: string; errors?: Record<string, string[]> }, // State from useFormState
+  formData: FormData // New form data
+): Promise<{ message: string; errors?: Record<string, string[]> }> {
+  // 1. Extract data from formData
+  const rawFormData = {
+    name: formData.get('name'),
+    rut: formData.get('rut'),
+    email: formData.get('email'),
+    phone: formData.get('phone'),
+    address: formData.get('address'),
+  };
 
+  // 2. Validate data
+  const validatedFields = clientSchema.safeParse(rawFormData);
+
+  // 3. Handle validation failure
   if (!validatedFields.success) {
-    throw new Error("Datos de cliente inválidos.")
+    return {
+      message: "Error de validación. Por favor, corrija los campos marcados.",
+      errors: validatedFields.error.flatten().fieldErrors,
+    };
   }
 
-  await prisma.client.update({
-    where: { id },
-    data: validatedFields.data,
-  })
+  // 4. Handle success
+  try {
+    await prisma.client.update({
+      where: { id },
+      data: validatedFields.data,
+    });
 
-  revalidatePath(`/dashboard/clients/${id}`)
-  revalidatePath('/dashboard/clients')
-} 
+    revalidatePath(`/dashboard/clients/${id}`);
+    revalidatePath('/dashboard/clients');
+    return { message: "Cliente actualizado con éxito!", errors: {} };
+  } catch (error) {
+    // 5. Handle database or other errors
+    console.error("Error al actualizar cliente:", error);
+    // It's good practice to avoid sending raw error messages to the client
+    return { message: "Error del servidor al actualizar el cliente. Intente de nuevo más tarde.", errors: {} };
+  }
+}

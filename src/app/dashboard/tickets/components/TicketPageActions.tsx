@@ -1,47 +1,56 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
-import { Pencil, Trash2 } from "lucide-react"
-import { Ticket } from "@prisma/client"
-import { DeleteConfirmationDialog } from "@/components/modules/DeleteConfirmationDialog"
-import { deleteTicket } from "@/app/dashboard/tickets/actions"
-import { toast } from "sonner"
-import { useRouter } from "next/navigation"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import { deleteTicket } from '../actions'
+import { toast } from 'sonner'
 
-interface TicketPageActionsProps {
-    ticket: Ticket
-}
+export function DeleteTicketButton({ ticketId }: { ticketId: string }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const router = useRouter()
 
-export function TicketPageActions({ ticket }: TicketPageActionsProps) {
-    const router = useRouter();
-
-    const handleDelete = async () => {
-        const result = await deleteTicket(ticket.id);
-        if (result.message.startsWith("Error")) {
-            toast.error(result.message);
-        } else {
-            toast.success(result.message);
-            router.push("/dashboard/tickets");
-        }
-        return result;
+  const handleDelete = async () => {
+    try {
+      await deleteTicket(ticketId)
+      toast.success('Ticket eliminado correctamente.')
+      router.push('/dashboard/tickets')
+      router.refresh()
+    } catch (error) {
+      toast.error('No se pudo eliminar el ticket.')
+    } finally {
+      setIsOpen(false)
     }
+  }
 
-    return (
-        <div className="flex items-center gap-2">
-            <Link href={`/dashboard/tickets/edit/${ticket.id}`}>
-                <Button>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Editar Ticket
-                </Button>
-            </Link>
-            <DeleteConfirmationDialog onConfirm={handleDelete} itemName={ticket.title}>
-                <Button variant="destructive">
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Eliminar
-                </Button>
-            </DeleteConfirmationDialog>
-        </div>
-    )
+  return (
+    <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
+      <AlertDialogTrigger asChild>
+        <Button variant="destructive">Eliminar</Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Esta acción no se puede deshacer. Esto eliminará permanentemente el ticket.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDelete}>Continuar</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
 } 

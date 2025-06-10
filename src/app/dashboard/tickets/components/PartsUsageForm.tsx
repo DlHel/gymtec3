@@ -24,6 +24,7 @@ import { Trash2, PlusCircle } from "lucide-react"
 import { addPartsToTicket } from "@/app/dashboard/tickets/actions"
 import { toast } from "sonner"
 import { Part } from "@prisma/client"
+import { useRouter } from "next/navigation"
 
 const partUsageSchema = z.object({
   partId: z.string().min(1, "Debes seleccionar un repuesto"),
@@ -40,6 +41,7 @@ interface PartsUsageFormProps {
 }
 
 export default function PartsUsageForm({ ticketId, availableParts }: PartsUsageFormProps) {
+  const router = useRouter()
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -59,7 +61,8 @@ export default function PartsUsageForm({ ticketId, availableParts }: PartsUsageF
       toast.error(result.error)
     } else {
       toast.success("Repuestos agregados exitosamente.")
-      form.reset()
+      form.reset({ parts: [{ partId: "", quantity: 1 }] })
+      router.refresh()
     }
   }
 

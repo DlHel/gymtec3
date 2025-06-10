@@ -1,8 +1,7 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { Supplier } from "@prisma/client"
-import { MoreHorizontal } from "lucide-react"
+import { MoreHorizontal, ArrowUpDown } from "lucide-react"
 import Link from "next/link"
 import {
     DropdownMenu,
@@ -13,29 +12,57 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { PurchaseOrder, Supplier } from "@prisma/client"
+import { format } from "date-fns"
+import { es } from "date-fns/locale"
 
-export type PurchaseOrder = {
-    id: string;
-    poNumber: string;
-    status: string;
-    issueDate: Date;
-    total: number;
-    supplier: Supplier;
+// Definimos un tipo extendido para incluir el proveedor y los items
+export type PurchaseOrderWithDetails = PurchaseOrder & {
+    supplier: { name: string } | null
+    items: { quantity: number; cost: number | null }[]
 }
 
-const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
-    DRAFT: "secondary",
-    ORDERED: "default",
-    PARTIALLY_RECEIVED: "outline",
-    RECEIVED: "default",
-    CANCELED: "destructive"
-};
+export type PurchaseOrderWithSupplier = PurchaseOrder & {
+    supplier: Supplier
+}
 
+const statuses: { [key: string]: string } = {
+    PENDING: "Pendiente",
+    ORDERED: "Ordenada",
+    SHIPPED: "Enviada",
+    RECEIVED: "Recibida",
+    CANCELLED: "Cancelada",
+}
 
-export const columns: ColumnDef<PurchaseOrder>[] = [
+const statusColors: { [key: string]: string } = {
+    PENDING: "bg-yellow-500",
+    ORDERED: "bg-blue-500",
+    SHIPPED: "bg-purple-500",
+    RECEIVED: "bg-green-500",
+    CANCELLED: "bg-red-500",
+}
+
+const statusVariantMap: { [key: string]: 'default' | 'secondary' | 'outline' | 'destructive' } = {
+    DRAFT: 'outline',
+    ORDERED: 'secondary',
+    RECEIVED: 'default',
+    CANCELLED: 'destructive',
+}
+
+export const columns: ColumnDef<PurchaseOrderWithSupplier>[] = [
     {
-        accessorKey: "poNumber",
-        header: "Nº Orden",
+        accessorKey: "orderNumber",
+        header: ({ column }) => {
+            return (
+                <Button
+                    variant="ghost"
+                    onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+                >
+                    N° Orden
+                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+            )
+        },
     },
     {
         accessorKey: "supplier.name",
@@ -45,31 +72,32 @@ export const columns: ColumnDef<PurchaseOrder>[] = [
         accessorKey: "status",
         header: "Estado",
         cell: ({ row }) => {
-            const status = row.getValue("status") as string;
-            const variant = statusVariantMap[status] || "default";
-            return <Badge variant={variant}>{status}</Badge>
-        }
+            const status = row.getValue("status") as string
+            return (
+                <Badge variant={statusVariantMap[status] || 'default'}>
+                    {status}
+                </Badge>
+            )
+        },
     },
     {
-        accessorKey: "issueDate",
-        header: "Fecha de Emisión",
-        cell: ({ row }) => {
-            const date = new Date(row.getValue("issueDate"))
-            return date.toLocaleDateString()
-        }
-    },
-    {
-        accessorKey: "total",
+        accessorKey: "totalAmount",
         header: "Total",
         cell: ({ row }) => {
-            const amount = parseFloat(row.getValue("total"))
+            const amount = parseFloat(row.getValue("totalAmount"))
             const formatted = new Intl.NumberFormat("es-CL", {
                 style: "currency",
                 currency: "CLP",
             }).format(amount)
-
-            return <div className="text-right font-medium">{formatted}</div>
-        }
+            return <div className="font-medium">{formatted}</div>
+        },
+    },
+    {
+        accessorKey: "orderDate",
+        header: "Fecha de Orden",
+        cell: ({ row }) => {
+            return format(new Date(row.original.orderDate), "dd/MM/yyyy", { locale: es })
+        },
     },
     {
         id: "actions",
@@ -87,9 +115,15 @@ export const columns: ColumnDef<PurchaseOrder>[] = [
                     <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                         <DropdownMenuItem asChild>
-                            <Link href={`/dashboard/finance/purchase-orders/edit/${order.id}`}>Ver / Editar</Link>
+                            <Link href={`/dashboard/finance/purchase-orders/edit/${order.id}`}>
+                                Ver / Editar
+                            </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem>Eliminar</DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={() => navigator.clipboard.writeText(order.id)}
+                        >
+                            Copiar ID de la Orden
+                        </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
             )

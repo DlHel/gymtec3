@@ -3,12 +3,17 @@
 import { useEffect, useState, useTransition } from "react"
 import { getChecklistsByKnowledgeBaseId, updateTicketChecklistState } from "@/app/dashboard/tickets/actions"
 import { Checklist } from "@prisma/client"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
-import { Loader } from "lucide-react"
+import { Loader, CheckCircle, XCircle, CircleSlash } from "lucide-react"
+
+type ChecklistItemState = {
+  status: 'ok' | 'fail' | 'na' | 'pending';
+  notes: string;
+}
 
 interface TicketChecklistProps {
     modelName: string;
@@ -19,43 +24,46 @@ interface TicketChecklistProps {
 export function TicketChecklist({ modelName, ticketId, initialChecklistStateJSON }: TicketChecklistProps) {
     const [checklists, setChecklists] = useState<Checklist[]>([]);
     const [selectedChecklist, setSelectedChecklist] = useState<Checklist | null>(null);
-    const [checkedState, setCheckedState] = useState<number[]>([]);
+    const [itemStates, setItemStates] = useState<Record<number, ChecklistItemState>>({});
     const [isLoading, setIsLoading] = useState(true);
     const [isPending, startTransition] = useTransition();
-    
+
     useEffect(() => {
         getChecklistsByKnowledgeBaseId(modelName).then(data => {
             setChecklists(data);
+            if (data.length > 0) {
+                // Seleccionar el primer checklist por defecto
+                setSelectedChecklist(data[0]);
+            }
             setIsLoading(false);
         });
-        
-        try {
-            const initialState = initialChecklistStateJSON ? JSON.parse(initialChecklistStateJSON) : [];
-            setCheckedState(Array.isArray(initialState) ? initialState : []);
-        } catch (e) {
-            setCheckedState([]);
-        }
+    }, [modelName]);
 
-    }, [modelName, initialChecklistStateJSON]);
+    useEffect(() => {
+        try {
+            const initialState = initialChecklistStateJSON ? JSON.parse(initialChecklistStateJSON) : {};
+            setItemStates(initialState);
+        } catch (e) {
+            setItemStates({});
+        }
+    }, [initialChecklistStateJSON]);
 
     const handleChecklistChange = (checklistId: string) => {
         const checklist = checklists.find(c => c.id === checklistId);
         setSelectedChecklist(checklist || null);
     };
 
-    const handleCheckboxChange = (index: number) => {
-        const newCheckedState = checkedState.includes(index)
-            ? checkedState.filter(i => i !== index)
-            : [...checkedState, index];
+    const updateItemState = (index: number, newState: Partial<ChecklistItemState>) => {
+        const currentItemState = itemStates[index] || { status: 'pending', notes: '' };
+        const updatedItemState = { ...currentItemState, ...newState };
         
-        setCheckedState(newCheckedState);
+        const newItemStates = { ...itemStates, [index]: updatedItemState };
+        setItemStates(newItemStates);
 
         startTransition(async () => {
-            const result = await updateTicketChecklistState(ticketId, newCheckedState);
-            if (result.success) {
-                toast.success(result.message);
-            } else {
-                toast.error(result.message);
+            const result = await updateTicketChecklistState(ticketId, JSON.stringify(newItemStates));
+            if (!result.success) {
+                toast.error("No se pudo guardar el progreso del checklist.");
             }
         });
     };
@@ -63,12 +71,21 @@ export function TicketChecklist({ modelName, ticketId, initialChecklistStateJSON
     const tasks = selectedChecklist?.tasks ? JSON.parse(selectedChecklist.tasks) : [];
     const checklistItems = Array.isArray(tasks) ? tasks : [];
 
+    const getStatusIcon = (status: ChecklistItemState['status']) => {
+        switch (status) {
+            case 'ok': return <CheckCircle className="h-5 w-5 text-green-500" />;
+            case 'fail': return <XCircle className="h-5 w-5 text-red-500" />;
+            case 'na': return <CircleSlash className="h-5 w-5 text-gray-400" />;
+            default: return <div className="h-5 w-5" />;
+        }
+    }
+
     if (isLoading) {
         return <Card><CardHeader><CardTitle>Cargando Checklists...</CardTitle></CardHeader></Card>
     }
     
     if (checklists.length === 0) {
-        return null; // No mostrar nada si no hay checklists para este modelo
+        return null;
     }
 
     return (
@@ -76,9 +93,10 @@ export function TicketChecklist({ modelName, ticketId, initialChecklistStateJSON
             <CardHeader>
                 <CardTitle className="flex justify-between items-center">
                     <span>Checklist de Trabajo</span>
-                    {isPending && <Loader className="animate-spin h-5 w-5" />}
+                    {isPending && <Loader className="animate-spin h-5 w-5 text-primary" />}
                 </CardTitle>
-                 <Select onValueChange={handleChecklistChange} value={selectedChecklist?.id || ""}>
+                <CardDescription>Selecciona una plantilla y completa las tareas.</CardDescription>
+                <Select onValueChange={handleChecklistChange} value={selectedChecklist?.id || ""}>
                     <SelectTrigger>
                         <SelectValue placeholder="Seleccionar un checklist..." />
                     </SelectTrigger>
@@ -90,19 +108,36 @@ export function TicketChecklist({ modelName, ticketId, initialChecklistStateJSON
                 </Select>
             </CardHeader>
             {selectedChecklist && (
-                <CardContent className="space-y-2">
-                    {checklistItems.map((item: any, index) => (
-                         <div key={index} className="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-50">
-                            <Checkbox 
-                                id={`item-${index}`}
-                                checked={checkedState.includes(index)}
-                                onCheckedChange={() => handleCheckboxChange(index)}
-                            />
-                            <Label htmlFor={`item-${index}`} className="flex-1 cursor-pointer">
-                                {item.text}
-                            </Label>
-                        </div>
-                    ))}
+                <CardContent className="space-y-4">
+                    {checklistItems.map((item: { text: string }, index) => {
+                        const state = itemStates[index] || { status: 'pending', notes: '' };
+                        return (
+                             <div key={index} className="p-3 rounded-md border bg-gray-50/50">
+                                <div className="flex items-center justify-between">
+                                    <p className="font-medium flex-1">{item.text}</p>
+                                    <div className="flex items-center gap-1">
+                                        <Button size="icon" variant={state.status === 'ok' ? 'default' : 'outline'} onClick={() => updateItemState(index, { status: 'ok' })}>
+                                            <CheckCircle className="h-5 w-5" />
+                                        </Button>
+                                        <Button size="icon" variant={state.status === 'fail' ? 'destructive' : 'outline'} onClick={() => updateItemState(index, { status: 'fail' })}>
+                                            <XCircle className="h-5 w-5" />
+                                        </Button>
+                                        <Button size="icon" variant={state.status === 'na' ? 'secondary' : 'outline'} onClick={() => updateItemState(index, { status: 'na' })}>
+                                            <CircleSlash className="h-5 w-5" />
+                                        </Button>
+                                    </div>
+                                </div>
+                                {(state.status === 'fail' || state.notes) && (
+                                     <Textarea
+                                        placeholder="Añadir notas sobre la falla..."
+                                        value={state.notes}
+                                        onChange={(e) => updateItemState(index, { notes: e.target.value })}
+                                        className="mt-2"
+                                    />
+                                )}
+                            </div>
+                        )
+                    })}
                 </CardContent>
             )}
         </Card>

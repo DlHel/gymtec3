@@ -1,80 +1,105 @@
 'use server'
 
-import { z } from 'zod';
-import { prisma } from '@/lib/prisma';
-import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+import { prisma } from '@/lib/prisma'
+import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
+import { z } from 'zod'
+import { getErrorMessage } from '@/lib/handle-error'
 
-const formSchema = z.object({
-    clientId: z.string().min(1),
-    ticketId: z.string().optional(),
-    status: z.string(),
-    notes: z.string().optional(),
-    items: z.preprocess(
-        (val) => (typeof val === 'string' ? JSON.parse(val) : val),
-        z.array(z.object({
-            description: z.string().min(1),
-            quantity: z.coerce.number().min(1),
-            unitPrice: z.coerce.number().min(0),
-        })).min(1)
-    ),
-});
+// This schema is used for validating the data from the form
+const quoteItemSchema = z.object({
+  description: z.string().min(1, 'La descripción es obligatoria.'),
+  quantity: z.coerce.number().min(1, 'La cantidad debe ser al menos 1.'),
+  unitPrice: z.coerce.number().min(0, 'El precio no puede ser negativo.'),
+})
 
-async function generateQuoteNumber() {
-    const lastQuote = await prisma.quote.findFirst({
-        orderBy: { quoteNumber: 'desc' },
-        select: { quoteNumber: true }
-    });
+const quoteFormSchema = z.object({
+  clientId: z.string().min(1, 'El cliente es obligatorio.'),
+  ticketId: z.string().optional().nullable(),
+  status: z.string().min(1, 'El estado es obligatorio.'),
+  issueDate: z.date({ required_error: 'La fecha de emisión es obligatoria.' }),
+  expiryDate: z.date({ required_error: 'La fecha de vencimiento es obligatoria.' }),
+  notes: z.string().optional(),
+  items: z.array(quoteItemSchema).min(1, 'La cotización debe tener al menos un ítem.'),
+})
 
-    if (!lastQuote) {
-        return 'COT-0001';
-    }
+export type QuoteFormValues = z.infer<typeof quoteFormSchema>
 
-    const lastNumber = parseInt(lastQuote.quoteNumber.split('-')[1]);
-    const newNumber = (lastNumber + 1).toString().padStart(4, '0');
-    return `COT-${newNumber}`;
+export async function createQuote(data: QuoteFormValues) {
+  const validatedFields = quoteFormSchema.safeParse(data)
+
+  if (!validatedFields.success) {
+    throw new Error('Error de validación. No se pudo crear la cotización.')
+  }
+
+  const { items, ...quoteData } = validatedFields.data
+  const total = items.reduce((acc, item) => acc + item.quantity * item.unitPrice, 0)
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const createdQuote = await tx.quote.create({
+        data: {
+          ...quoteData,
+          total,
+        },
+      })
+
+      const quoteItems = items.map((item) => ({
+        ...item,
+        quoteId: createdQuote.id,
+      }))
+
+      await tx.quoteItem.createMany({
+        data: quoteItems,
+      })
+    })
+  } catch (error) {
+    throw new Error(getErrorMessage(error))
+  }
+
+  revalidatePath('/dashboard/finance/quotes')
+  redirect('/dashboard/finance/quotes')
 }
 
-export async function createQuote(formData: FormData) {
-    const rawFormData = Object.fromEntries(formData.entries());
-    const validatedFields = formSchema.safeParse(rawFormData);
+export async function updateQuote(id: string, data: QuoteFormValues) {
+    const validatedFields = quoteFormSchema.safeParse(data)
 
     if (!validatedFields.success) {
-        console.error(validatedFields.error.flatten().fieldErrors);
-        return {
-            errors: validatedFields.error.flatten().fieldErrors,
-            message: 'Error de validación. Faltan campos o son inválidos.',
-        };
+        throw new Error('Error de validación. No se pudo actualizar la cotización.')
     }
 
-    const data = validatedFields.data;
-    const quoteNumber = await generateQuoteNumber();
-    const total = data.items.reduce((acc, item) => acc + item.quantity * item.unitPrice, 0);
+    const { items, ...quoteData } = validatedFields.data
+    const total = items.reduce((acc, item) => acc + item.quantity * item.unitPrice, 0)
 
     try {
-        await prisma.quote.create({
-            data: {
-                quoteNumber,
-                clientId: data.clientId,
-                ticketId: data.ticketId || null,
-                status: data.status,
-                notes: data.notes,
-                total,
-                items: {
-                    create: data.items.map(item => ({
-                        description: item.description,
-                        quantity: item.quantity,
-                        unitPrice: item.unitPrice,
-                        total: item.quantity * item.unitPrice,
-                    }))
+        await prisma.$transaction(async (tx) => {
+            await tx.quote.update({
+                where: { id },
+                data: {
+                    ...quoteData,
+                    total
                 }
-            }
-        });
+            })
+
+            await tx.quoteItem.deleteMany({
+                where: { quoteId: id }
+            })
+
+            const newItems = items.map(item => ({
+                ...item,
+                quoteId: id
+            }))
+
+            await tx.quoteItem.createMany({
+                data: newItems
+            })
+        })
+
     } catch (error) {
-        console.error(error);
-        return { message: "Error de la base de datos: no se pudo crear la cotización." };
+        throw new Error(getErrorMessage(error))
     }
 
-    revalidatePath('/dashboard/finance/quotes');
-    redirect('/dashboard/finance/quotes');
+    revalidatePath('/dashboard/finance/quotes')
+    revalidatePath(`/dashboard/finance/quotes/edit/${id}`)
+    redirect('/dashboard/finance/quotes')
 }

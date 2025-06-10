@@ -14,6 +14,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { addComment } from "@/app/dashboard/tickets/actions"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 const formSchema = z.object({
   content: z.string().min(1, "El comentario no puede estar vacío."),
@@ -24,6 +25,7 @@ interface CommentFormProps {
 }
 
 export default function CommentForm({ ticketId }: CommentFormProps) {
+  const router = useRouter()
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -39,6 +41,7 @@ export default function CommentForm({ ticketId }: CommentFormProps) {
     } else {
       toast.success("Comentario agregado exitosamente.")
       form.reset()
+      router.refresh()
     }
   }
 

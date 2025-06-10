@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import * as React from 'react'
 import {
   ColumnDef,
   ColumnFiltersState,
   SortingState,
+  VisibilityState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -12,7 +13,6 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-
 import {
   Table,
   TableBody,
@@ -24,26 +24,28 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
-interface KnowledgeBaseTableProps<TData, TValue> {
+interface TicketsTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
 }
 
-export function KnowledgeBaseTable<TData, TValue>({
+export function TicketsTable<TData, TValue>({
   columns,
   data,
-}: KnowledgeBaseTableProps<TData, TValue>) {
-  const [sorting, setSorting] = useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+}: TicketsTableProps<TData, TValue>) {
+  const [sorting, setSorting] = React.useState<SortingState>([])
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    []
+  )
 
   const table = useReactTable({
     data,
     columns,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
-    onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
     state: {
       sorting,
@@ -52,15 +54,13 @@ export function KnowledgeBaseTable<TData, TValue>({
   })
 
   return (
-    <div>
-      <div className="flex items-center py-4">
+    <div className="w-full">
+        <div className="flex items-center py-4">
         <Input
-          placeholder="Buscar por modelo..."
-          value={
-            (table.getColumn('modelName')?.getFilterValue() as string) ?? ''
-          }
+          placeholder="Filtrar por título..."
+          value={(table.getColumn('title')?.getFilterValue() as string) ?? ''}
           onChange={(event) =>
-            table.getColumn('modelName')?.setFilterValue(event.target.value)
+            table.getColumn('title')?.setFilterValue(event.target.value)
           }
           className="max-w-sm"
         />

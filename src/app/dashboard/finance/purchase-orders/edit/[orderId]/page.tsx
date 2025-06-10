@@ -1,42 +1,52 @@
-import { prisma } from "@/lib/prisma";
-import { notFound } from "next/navigation";
-import { PageHeader } from "@/components/modules/PageHeader";
-import { PurchaseOrderForm } from "../../components/PurchaseOrderForm";
+import { prisma } from '@/lib/prisma'
+import { PurchaseOrderForm } from '../../components/purchase-order-form'
+import { notFound } from 'next/navigation'
 
-async function getOrderData(orderId: string) {
-    const purchaseOrder = await prisma.purchaseOrder.findUnique({
-        where: { id: orderId },
-        include: {
-            items: true,
-        },
-    });
-
-    if (!purchaseOrder) return { purchaseOrder: null, suppliers: [], parts: [] };
-
-    const suppliers = await prisma.supplier.findMany();
-    const parts = await prisma.part.findMany();
-
-    return { purchaseOrder, suppliers, parts };
+interface EditPurchaseOrderPageProps {
+  params: {
+    orderId: string
+  }
 }
 
+export default async function EditPurchaseOrderPage({
+  params,
+}: EditPurchaseOrderPageProps) {
+  const [purchaseOrder, suppliers, parts] = await Promise.all([
+    prisma.purchaseOrder.findUnique({
+      where: { id: params.orderId },
+      include: {
+        items: {
+          include: {
+            part: true,
+          },
+        },
+      },
+    }),
+    prisma.supplier.findMany(),
+    prisma.part.findMany(),
+  ])
 
-export default async function EditPurchaseOrderPage({ params }: { params: { orderId: string } }) {
-    const { purchaseOrder, suppliers, parts } = await getOrderData(params.orderId);
+  if (!purchaseOrder) {
+    notFound()
+  }
 
-    if (!purchaseOrder) {
-        return notFound();
-    }
-
-    return (
+  return (
+    <div className="hidden h-full flex-1 flex-col space-y-8 p-8 md:flex">
+      <div className="flex items-center justify-between space-y-2">
         <div>
-            <PageHeader title={`Editar Orden de Compra - ${purchaseOrder.poNumber}`} />
-            <div className="p-8">
-                <PurchaseOrderForm
-                    purchaseOrder={purchaseOrder}
-                    suppliers={suppliers}
-                    parts={parts}
-                />
-            </div>
+          <h2 className="text-2xl font-bold tracking-tight">
+            Editar Orden de Compra
+          </h2>
+          <p className="text-muted-foreground">
+            Modifica los detalles de la orden de compra seleccionada.
+          </p>
         </div>
-    );
-} 
+      </div>
+      <PurchaseOrderForm
+        purchaseOrder={purchaseOrder}
+        suppliers={suppliers}
+        parts={parts}
+      />
+    </div>
+  )
+}

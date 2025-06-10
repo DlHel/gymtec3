@@ -1,22 +1,20 @@
-import { prisma } from "@/lib/prisma"
-import { PageHeader } from "@/components/modules/PageHeader"
-import { PurchaseOrderForm } from "../components/PurchaseOrderForm";
-
-async function getFormData() {
-    const suppliers = await prisma.supplier.findMany();
-    const parts = await prisma.part.findMany();
-    return { suppliers, parts };
-}
+import { Heading } from "@/components/ui/heading"
+import { getSuppliers, getParts } from "../actions"
+import { PurchaseOrderForm } from "./components/PurchaseOrderForm"
 
 export default async function NewPurchaseOrderPage() {
-    const { suppliers, parts } = await getFormData();
+  const [suppliers, parts] = await Promise.all([
+    getSuppliers(),
+    getParts()
+  ])
 
-    return (
-        <div>
-            <PageHeader title="Crear Orden de Compra" />
-            <div className="p-8">
-                <PurchaseOrderForm suppliers={suppliers} parts={parts} />
-            </div>
-        </div>
-    )
-} 
+  return (
+    <div className="flex-1 space-y-4 p-8 pt-6">
+      <Heading
+        title="Crear Orden de Compra"
+        description="Complete el formulario para crear una nueva orden de compra."
+      />
+      <PurchaseOrderForm suppliers={suppliers} parts={parts} />
+    </div>
+  )
+}

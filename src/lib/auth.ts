@@ -1,77 +1,66 @@
-import type { NextAuthOptions } from "next-auth"
-import CredentialsProvider from "next-auth/providers/credentials"
-import { prisma } from "@/lib/prisma"
-import { getServerSession } from "next-auth"
-// Es importante instalar bcrypt: npm install bcrypt
-// Y los tipos: npm install -D @types/bcrypt
-import bcrypt from "bcrypt"
+import { NextAuthOptions } from 'next-auth';
+import { PrismaAdapter } from '@next-auth/prisma-adapter';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import bcrypt from 'bcryptjs';
+import { prisma } from './prisma';
 
 export const authOptions: NextAuthOptions = {
+  adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
-      name: "Credentials",
+      name: 'Credentials',
       credentials: {
-        email: { label: "Email", type: "email", placeholder: "test@test.com" },
-        password: { label: "Password", type: "password" },
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          return null
+          throw new Error('Invalid credentials');
         }
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
-        })
+        });
 
-        if (!user) {
-          return null
+        if (!user || !user.password) {
+          throw new Error('Invalid credentials');
         }
-        
-        // Aquí comparamos la contraseña hasheada
-        // Por ahora, para desarrollo, compararemos en texto plano
-        // const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
-        // if (!isPasswordValid) {
-        //   return null
-        // }
 
-        if (credentials.password !== user.password) {
-          console.log("Contraseña incorrecta")
-          return null
+        const isPasswordCorrect = await bcrypt.compare(
+          credentials.password,
+          user.password
+        );
+
+        if (!isPasswordCorrect) {
+          throw new Error('Invalid credentials');
         }
-        
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        }
+
+        return user;
       },
     }),
   ],
+  session: {
+    strategy: 'jwt',
+  },
   callbacks: {
-    jwt({ token, user }) {
-      if (user) {
-        token.id = user.id
-        token.role = (user as any).role
+    async session({ session, token }) {
+      if (token && session.user) {
+        session.user.id = token.id as string;
+        (session.user as any).role = token.role;
       }
-      return token
+      return session;
     },
-    session({ session, token }) {
-      if (session?.user) {
-        session.user.id = token.id as string
-        session.user.role = token.role as string
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.role = (user as any).role;
       }
-      return session
+      return token;
     },
   },
   pages: {
-    signIn: "/auth/login",
-  },
-  session: {
-    strategy: "jwt",
+    signIn: '/auth/login',
+    error: '/auth/error',
   },
   secret: process.env.NEXTAUTH_SECRET,
-}
-
-// Function to get server session
-export const auth = () => getServerSession(authOptions) 
+};

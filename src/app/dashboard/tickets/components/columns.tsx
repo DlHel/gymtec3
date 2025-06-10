@@ -1,7 +1,7 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { Ticket, User, Client } from "@prisma/client"
+import { Ticket, User, Client, Contract, SLA } from "@prisma/client"
 import { ArrowUpDown, MoreHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -15,21 +15,39 @@ import {
 } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
 import { format } from 'date-fns'
+import { SlaIndicator } from "@/components/sla-indicator"
+import { DataTableColumnHeader } from "@/components/ui/data-table-column-header"
+import { DataTableRowActions } from "./data-table-row-actions"
 
 // Combinamos los tipos para tener acceso a los datos relacionados
 export type TicketWithRelations = Ticket & {
   client: Client
   assignedTo: User | null
   equipment: { model: string } | null
+  contract: (Contract & { sla: SLA | null }) | null;
 }
 
-const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive" } = {
+const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
     OPEN: "secondary",
     IN_PROGRESS: "default",
     CLOSED: "destructive",
+    PENDING_APPROVAL: "outline",
 }
 
 export const columns: ColumnDef<TicketWithRelations>[] = [
+  {
+    id: 'sla',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="SLA" />
+    ),
+    cell: ({ row }) => {
+      return <SlaIndicator ticket={row.original} />
+    }
+  },
+  {
+    accessorKey: "ticketNumber",
+    header: "N° Ticket",
+  },
   {
     accessorKey: "title",
     header: ({ column }) => {
@@ -42,6 +60,17 @@ export const columns: ColumnDef<TicketWithRelations>[] = [
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         )
+    },
+    cell: ({ row }) => {
+      const ticket = row.original
+      return (
+        <Link
+          href={`/dashboard/tickets/${ticket.id}`}
+          className="font-medium text-primary underline-offset-4 hover:underline"
+        >
+          {ticket.title}
+        </Link>
+      )
     },
   },
   {

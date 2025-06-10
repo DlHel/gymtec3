@@ -1,9 +1,13 @@
 "use client"
 
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import * as z from "zod"
-import { Button } from "@/components/ui/button"
+import * as z from 'zod'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useRouter } from 'next/navigation'
+import { useState, useTransition } from 'react'
+import { toast } from 'sonner'
+import { Supplier } from '@prisma/client'
+
 import {
   Form,
   FormControl,
@@ -11,139 +15,160 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Supplier } from "@prisma/client"
-import { createSupplier, updateSupplier } from "../actions"
-import { toast } from "sonner"
-import { useRouter } from "next/navigation"
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Heading } from '@/components/ui/heading'
+import { Separator } from '@/components/ui/separator'
 
 const formSchema = z.object({
-    name: z.string().min(3, "El nombre es obligatorio."),
-    contactName: z.string().optional(),
-    email: z.string().email("Debe ser un email válido.").optional().or(z.literal('')),
-    phone: z.string().optional(),
-    address: z.string().optional(),
+  name: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
+  email: z.string().email({ message: 'Por favor, introduce un email válido.' }),
+  phone: z.string().min(8, { message: 'El teléfono debe tener al menos 8 dígitos.' }).optional().or(z.literal('')),
+  address: z.string().optional(),
+  contactPerson: z.string().optional(),
+  rut: z.string().optional(),
 })
 
+type SupplierFormValues = z.infer<typeof formSchema>
+
 interface SupplierFormProps {
-    supplier?: Supplier
+  initialData: Supplier | null
+  onSubmit: (data: SupplierFormValues) => Promise<any>
 }
 
-export function SupplierForm({ supplier }: SupplierFormProps) {
-    const router = useRouter();
-    const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
-        defaultValues: {
-            name: supplier?.name || "",
-            contactName: supplier?.contactName || "",
-            email: supplier?.email || "",
-            phone: supplier?.phone || "",
-            address: supplier?.address || "",
-        },
+export const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit }) => {
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+  
+  const title = initialData ? 'Editar Proveedor' : 'Nuevo Proveedor'
+  const description = initialData ? 'Edita los detalles del proveedor.' : 'Añade un nuevo proveedor a la lista.'
+  const action = initialData ? 'Guardar Cambios' : 'Crear Proveedor'
+
+  const form = useForm<SupplierFormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: initialData || {
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+      contactPerson: '',
+      rut: '',
+    },
+  })
+
+  const processSubmit = (data: SupplierFormValues) => {
+    startTransition(() => {
+        toast.promise(onSubmit(data), {
+            loading: `${initialData ? 'Actualizando' : 'Creando'} proveedor...`,
+            success: (res) => {
+                if (res.success) {
+                    router.push('/dashboard/finance/suppliers')
+                    return res.message
+                }
+                throw new Error(res.message)
+            },
+            error: (err) => err.message
+        })
     })
+  }
 
-    const isSubmitting = form.formState.isSubmitting;
-
-    async function onSubmit(values: z.infer<typeof formSchema>) {
-        const formData = new FormData();
-        Object.entries(values).forEach(([key, value]) => {
-            if (value) {
-                formData.append(key, value);
-            }
-        });
-
-        const result = supplier
-            ? await updateSupplier(supplier.id, formData)
-            : await createSupplier(formData);
-
-        if (result?.errors) {
-            toast.error(result.message);
-        } else {
-            toast.success(`Proveedor ${supplier ? 'actualizado' : 'creado'} exitosamente.`);
-            router.push("/dashboard/finance/suppliers");
-            router.refresh();
-        }
-    }
-
-    return (
-        <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 bg-white p-8 rounded-lg shadow-md">
-                <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Nombre del Proveedor</FormLabel>
-                            <FormControl>
-                                <Input placeholder="Ej: Repuestos Acme S.A." {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <FormField
-                        control={form.control}
-                        name="contactName"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Nombre del Contacto</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Ej: Juan Pérez" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                     <FormField
-                        control={form.control}
-                        name="phone"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Teléfono</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="+56 9 1234 5678" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </div>
-                 <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                                <Input type="email" placeholder="contacto@acme.com" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                 <FormField
-                    control={form.control}
-                    name="address"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Dirección</FormLabel>
-                            <FormControl>
-                                <Textarea placeholder="Av. Siempre Viva 123, Springfield" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-
-                <div className="flex justify-end">
-                    <Button type="submit" disabled={isSubmitting}>
-                        {isSubmitting ? "Guardando..." : (supplier ? "Guardar Cambios" : "Crear Proveedor")}
-                    </Button>
-                </div>
-            </form>
-        </Form>
-    )
+  return (
+    <>
+      <div className="flex items-center justify-between">
+        <Heading title={title} description={description} />
+      </div>
+      <Separator />
+      <Form {...form}>
+        <form
+          onSubmit={form.handleSubmit(processSubmit)}
+          className="space-y-8 w-full"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nombre</FormLabel>
+                  <FormControl>
+                    <Input disabled={isPending} placeholder="Nombre del proveedor" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input disabled={isPending} placeholder="Email de contacto" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Teléfono</FormLabel>
+                  <FormControl>
+                    <Input disabled={isPending} placeholder="Teléfono de contacto" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Dirección</FormLabel>
+                  <FormControl>
+                    <Input disabled={isPending} placeholder="Dirección del proveedor" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="contactPerson"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Persona de Contacto</FormLabel>
+                  <FormControl>
+                    <Input disabled={isPending} placeholder="Nombre del contacto" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="rut"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>RUT</FormLabel>
+                  <FormControl>
+                    <Input disabled={isPending} placeholder="RUT del proveedor" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <Button disabled={isPending} className="ml-auto" type="submit">
+            {isPending ? 'Guardando...' : action}
+          </Button>
+        </form>
+      </Form>
+    </>
+  )
 }

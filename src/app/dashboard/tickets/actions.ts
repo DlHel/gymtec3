@@ -2,19 +2,20 @@
 
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
+import type { Prisma } from "@prisma/client"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
 import { TicketStatus, TicketPriority } from "@/types/tickets"
-import { auth } from '@/lib/auth'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/lib/auth'
+import { getErrorMessage } from '@/lib/handle-error'
 
 const ticketSchema = z.object({
   title: z.string().min(5, "El título debe tener al menos 5 caracteres."),
   description: z.string().min(10, "La descripción debe tener al menos 10 caracteres."),
   clientId: z.string({ required_error: "Debe seleccionar un cliente." }),
-  status: z.enum(["OPEN", "IN_PROGRESS", "CLOSED", "ON_HOLD"]),
-  priority: z.enum(["LOW", "MEDIUM", "HIGH"]),
+  status: z.nativeEnum(TicketStatus),
+  priority: z.nativeEnum(TicketPriority),
   assignedToId: z.string().optional().nullable(),
 })
 
@@ -25,6 +26,16 @@ const TicketSchema = z.object({
   status: z.nativeEnum(TicketStatus),
   priority: z.nativeEnum(TicketPriority),
   assignedToId: z.string().optional().nullable(),
+})
+
+const createTicketSchema = z.object({
+  title: z.string().min(1, 'El título es obligatorio'),
+  description: z.string().optional(),
+  clientId: z.string().min(1, 'El cliente es obligatorio'),
+  locationId: z.string().optional(),
+  equipmentId: z.string().optional(),
+  priority: z.string().default('MEDIUM'),
+  assignedToId: z.string().optional(),
 })
 
 export type State = {
@@ -39,221 +50,268 @@ export type State = {
   message?: string | null
 }
 
-export async function createTicket(formData: unknown) {
-    const session = await getServerSession(authOptions)
+async function generateTicketNumber(clientId: string) {
+  const clientPart = clientId.slice(-4).toUpperCase()
 
-    if (!session?.user?.id) {
-        return {
-            message: "Error de autenticación: No se pudo verificar el usuario.",
-        }
+  const now = new Date()
+  const day = now.getDate().toString().padStart(2, '0')
+  const year = now.getFullYear().toString().slice(-2)
+  const datePart = `${day}${year}`
+
+  const lastTicketToday = await prisma.ticket.findFirst({
+    where: {
+      ticketNumber: {
+        contains: `-${datePart}-`,
+      },
+    },
+    orderBy: {
+      ticketNumber: 'desc',
+    },
+    select: { ticketNumber: true },
+  })
+
+  let correlative = 1
+  if (lastTicketToday?.ticketNumber) {
+    const lastCorrelativeStr = lastTicketToday.ticketNumber.split('-')[2]
+    const lastCorrelative = parseInt(lastCorrelativeStr, 10)
+    if (!isNaN(lastCorrelative)) {
+      correlative = lastCorrelative + 1
     }
+  }
 
-    const validatedFields = ticketSchema.safeParse(formData)
+  const correlativePart = correlative.toString().padStart(4, '0')
 
-    if (!validatedFields.success) {
-        return {
-            errors: validatedFields.error.flatten().fieldErrors,
-            message: "Error de validación. Faltan campos obligatorios.",
-        }
+  return `${clientPart}-${datePart}-${correlativePart}`
+}
+
+export async function createTicket(prevState: any, formData: FormData) {
+  const rawData = Object.fromEntries(formData)
+  const validatedFields = createTicketSchema.safeParse(rawData)
+
+  if (!validatedFields.success) {
+    return {
+      error: true,
+      message: validatedFields.error.flatten().fieldErrors,
     }
+  }
 
-    const { title, description, clientId, assignedToId, priority } = validatedFields.data
+  const { clientId, locationId, equipmentId, ...data } = validatedFields.data
 
-    try {
-        await prisma.ticket.create({
-            data: {
-                title,
-                description,
-                priority,
-                status: 'OPEN', // Estado inicial por defecto
-                client: { connect: { id: clientId } },
-                createdBy: { connect: { id: session.user.id } },
-                // Conexión opcional con el técnico
-                ...(assignedToId && assignedToId !== 'unassigned' && { assignedTo: { connect: { id: assignedToId } } }),
-            }
-        })
-    } catch (error) {
-        console.error(error)
-        return {
-            message: "Error de base de datos: No se pudo crear el ticket.",
-        }
+  try {
+    const ticketNumber = await generateTicketNumber(clientId)
+    await prisma.ticket.create({
+      data: {
+        ...data,
+        ticketNumber,
+        client: { connect: { id: clientId } },
+        ...(locationId && { location: { connect: { id: locationId } } }),
+        ...(equipmentId && { equipment: { connect: { id: equipmentId } } }),
+      },
+    })
+
+  } catch (error) {
+    console.error(error)
+    return {
+      error: true,
+      message: getErrorMessage(error),
     }
+  }
 
-    revalidatePath("/dashboard/tickets")
-    redirect("/dashboard/tickets")
+  revalidatePath('/dashboard/tickets')
+  revalidatePath(`/dashboard/clients/${clientId}`)
+  redirect('/dashboard/tickets')
 }
 
 export async function updateTicket(id: string, prevState: State, formData: FormData): Promise<State> {
-    const validatedFields = TicketSchema.safeParse({
-        title: formData.get("title"),
-        description: formData.get("description"),
-        clientId: formData.get("clientId"),
-        status: formData.get("status"),
-        priority: formData.get("priority"),
-        assignedToId: formData.get("assignedToId"),
+  const validatedFields = TicketSchema.safeParse({
+    title: formData.get("title"),
+    description: formData.get("description"),
+    clientId: formData.get("clientId"),
+    status: formData.get("status"),
+    priority: formData.get("priority"),
+    assignedToId: formData.get("assignedToId"),
+  });
+
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: "Error de validación. Por favor, corrija los campos.",
+    };
+  }
+
+  const { title, description, clientId, status, priority, assignedToId } = validatedFields.data;
+
+  try {
+    await prisma.ticket.update({
+      where: { id },
+      data: {
+        title,
+        description,
+        clientId,
+        status,
+        priority,
+        assignedToId,
+      },
     });
+  } catch (error) {
+    return { message: "Error de base de datos: No se pudo actualizar el ticket." };
+  }
 
-    if (!validatedFields.success) {
-        return {
-            errors: validatedFields.error.flatten().fieldErrors,
-            message: "Error de validación. Por favor, corrija los campos.",
-        };
-    }
-
-    const { title, description, clientId, status, priority, assignedToId } = validatedFields.data;
-
-    try {
-        await prisma.ticket.update({
-            where: { id },
-            data: {
-                title,
-                description,
-                clientId,
-                status,
-                priority,
-                assignedToId,
-            },
-        });
-    } catch (error) {
-        return { message: "Error de base de datos: No se pudo actualizar el ticket." };
-    }
-
-    revalidatePath(`/dashboard/tickets`);
-    revalidatePath(`/dashboard/tickets/${id}`);
-    redirect(`/dashboard/tickets/${id}`);
+  revalidatePath(`/dashboard/tickets`);
+  revalidatePath(`/dashboard/tickets/${id}`);
+  redirect(`/dashboard/tickets/${id}`);
 }
 
 export async function deleteTicket(id: string) {
-    try {
-        await prisma.ticket.delete({
-            where: { id },
-        });
-        revalidatePath("/dashboard/tickets");
-        return { message: "Ticket eliminado exitosamente." };
-    } catch (error) {
-        // Podríamos verificar errores específicos, como tickets con datos asociados que no se pueden borrar
-        return { message: "Error de base de datos: No se pudo eliminar el ticket." };
-    }
-}
-
-export async function updateTicketChecklistState(ticketId: string, checklistState: number[]) {
-    try {
-        await prisma.ticket.update({
-            where: { id: ticketId },
-            data: {
-                checklistState: JSON.stringify(checklistState)
-            }
-        });
-        revalidatePath(`/dashboard/tickets/${ticketId}`);
-        return { success: true, message: "Progreso del checklist guardado." };
-    } catch (error) {
-        return { success: false, message: "Error al guardar el progreso." };
-    }
-}
-
-export async function getChecklistsByKnowledgeBaseId(knowledgeBaseId: string) {
-    return prisma.checklist.findMany({
-        where: { knowledgeBaseId },
-        orderBy: { createdAt: 'asc' }
+  try {
+    await prisma.ticket.delete({
+      where: { id },
     });
+    revalidatePath("/dashboard/tickets");
+    return { message: "Ticket eliminado exitosamente." };
+  } catch (error) {
+    return { message: "Error de base de datos: No se pudo eliminar el ticket." };
+  }
+}
+
+export async function getChecklistsByKnowledgeBaseId(modelName: string) {
+  const knowledgeBaseEntry = await prisma.knowledgeBaseEntry.findUnique({
+    where: { model: modelName },
+    include: { checklists: true }
+  });
+  return knowledgeBaseEntry?.checklists || [];
+}
+
+export async function updateTicketChecklistState(ticketId: string, checklistStateJSON: string) {
+  try {
+    await prisma.ticket.update({
+      where: { id: ticketId },
+      data: { checklistState: checklistStateJSON },
+    });
+    revalidatePath(`/dashboard/tickets/${ticketId}`);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
+  }
 }
 
 export async function addPartsToTicket(ticketId: string, parts: { partId: string, quantity: number }[]) {
-    try {
-        await prisma.$transaction(async (tx) => {
-            for (const part of parts) {
-                const partInStock = await tx.part.findUnique({
-                    where: { id: part.partId }
-                });
-
-                if (!partInStock || partInStock.stock < part.quantity) {
-                    throw new Error(`Stock insuficiente para "${partInStock?.name || part.partId}". Disponible: ${partInStock?.stock || 0}, Solicitado: ${part.quantity}.`);
-                }
-
-                await tx.part.update({
-                    where: { id: part.partId },
-                    data: { stock: { decrement: part.quantity } }
-                });
-
-                await tx.partUsage.create({
-                    data: {
-                        ticketId,
-                        partId: part.partId,
-                        quantity: part.quantity
-                    }
-                });
-            }
+  'use server'
+  try {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      for (const part of parts) {
+        await tx.partUsage.create({
+          data: {
+            ticketId,
+            partId: part.partId,
+            quantity: part.quantity,
+          },
         });
-        
-        revalidatePath(`/dashboard/tickets/${ticketId}`);
-        return { success: true };
-    } catch (error: any) {
-        return { error: error.message };
-    }
+        await tx.part.update({
+          where: { id: part.partId },
+          data: {
+            stock: {
+              decrement: part.quantity,
+            },
+          },
+        });
+      }
+    });
+    revalidatePath(`/dashboard/tickets/${ticketId}`);
+    return { success: true };
+  } catch (error) {
+    return { error: getErrorMessage(error) };
+  }
 }
 
-export async function addTimeEntry(ticketId: string, data: { hours: number, description?: string }) {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) return { error: "No autenticado" };
+// Function to add time entry to a ticket
+export async function addTimeEntry(ticketId: string, data: { hours: number; description?: string }) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return { error: 'No autenticado' };
 
-    try {
-        await prisma.timeEntry.create({
-            data: {
-                ticketId,
-                userId: session.user.id,
-                hours: data.hours,
-                description: data.description,
-            }
-        });
-        revalidatePath(`/dashboard/tickets/${ticketId}`);
-        return { success: true };
-    } catch (error) {
-        return { error: "No se pudo registrar las horas." };
-    }
+  try {
+    await prisma.timeEntry.create({
+      data: {
+        ticketId,
+        userId: session.user.id,
+        hours: data.hours,
+        description: data.description,
+      }
+    });
+    revalidatePath(`/dashboard/tickets/${ticketId}`);
+    return { success: true };
+  } catch (error) {
+    return { error: "No se pudo registrar las horas." };
+  }
 }
 
 export async function addComment(ticketId: string, content: string) {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) return { error: "No autenticado" };
-
-    try {
-        await prisma.comment.create({
-            data: {
-                ticketId,
-                userId: session.user.id,
-                content,
-            }
-        });
-        revalidatePath(`/dashboard/tickets/${ticketId}`);
-        return { success: true };
-    } catch (error) {
-        return { error: "No se pudo agregar el comentario." };
-    }
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return { error: "No autenticado" };
+  try {
+    await prisma.comment.create({
+      data: {
+        content,
+        ticketId,
+        userId: session.user.id,
+      }
+    });
+    revalidatePath(`/dashboard/tickets/${ticketId}`);
+    return { success: true };
+  } catch (error) {
+    return { error: "No se pudo añadir el comentario." };
+  }
 }
 
 export async function getTickets() {
-  const session = await auth()
-  const userId = session?.user?.id
-  const userRole = session?.user?.role
-
-  if (!userId) {
-    return [] // Should be protected by middleware
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return { error: 'No autenticado' };
   }
+  try {
+    const tickets = await prisma.ticket.findMany({
+      where: {
+        ...(session.user.role !== 'ADMIN' && { assignedToId: session.user.id })
+      },
+      include: {
+        client: true,
+        assignedTo: true,
+        contract: {
+          include: {
+            sla: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+    return { tickets };
+  } catch (error) {
+    return { error: getErrorMessage(error) };
+  }
+}
 
-  const whereClause =
-    userRole === 'ADMIN' ? {} : { assignedToId: userId }
+async function sendClosingNotification(ticketId: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return { error: "No autenticado" };
+  // Lógica para enviar email...
+  console.log(`Usuario ${session.user.name} notificó cierre de ticket ${ticketId}`);
+}
 
-  const tickets = await prisma.ticket.findMany({
-    where: whereClause,
-    include: {
-      client: true,
-      equipment: true,
-      assignedTo: true,
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-  })
-
-  return tickets
-} 
+export async function updateTicketStatus(ticketId: string, status: string) {
+  'use server'
+  try {
+    const updatedTicket = await prisma.ticket.update({
+      where: { id: ticketId },
+      data: { status },
+    });
+    if (updatedTicket.status === 'PENDING_APPROVAL') {
+      await sendClosingNotification(ticketId);
+    }
+    revalidatePath(`/dashboard/tickets/${ticketId}`);
+    return { success: true };
+  } catch (error) {
+    return { error: getErrorMessage(error) };
+  }
+}

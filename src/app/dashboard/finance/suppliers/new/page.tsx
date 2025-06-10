@@ -1,15 +1,29 @@
-import { SupplierForm } from "../components/SupplierForm";
+'use client'
 
-export default function NewSupplierPage() {
-    return (
+import { SupplierForm } from '../components/SupplierForm'
+import { createSupplier } from '../actions'
+
+const NewSupplierPage = () => {
+    
+  const handleCreateSupplier = async (data: any) => {
+    return await createSupplier(data)
+  }
+
+  return (
+    <div className="hidden h-full flex-1 flex-col space-y-8 p-8 md:flex">
+      <div className="flex items-center justify-between space-y-2">
         <div>
-            <div className="mb-6">
-                <h1 className="text-3xl font-bold">Crear Nuevo Proveedor</h1>
-                <p className="text-muted-foreground mt-2">
-                    Rellena los datos para registrar un nuevo proveedor.
-                </p>
-            </div>
-            <SupplierForm />
+          <h2 className="text-2xl font-bold tracking-tight">
+            Crear Nuevo Proveedor
+          </h2>
+          <p className="text-muted-foreground">
+            Añade un nuevo proveedor a tu lista para futuras órdenes de compra.
+          </p>
         </div>
-    )
-} 
+      </div>
+      <SupplierForm initialData={null} onSubmit={handleCreateSupplier} />
+    </div>
+  )
+}
+
+export default NewSupplierPage

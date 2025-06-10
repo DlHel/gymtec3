@@ -1,27 +1,17 @@
-import { prisma } from "@/lib/prisma";
-import { PlusCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { SuppliersDataTable } from "./components/SuppliersDataTable";
-import { columns } from "./components/columns";
-import { PageHeader } from "@/components/modules/PageHeader";
+import { getSuppliers } from './actions'
+import { SupplierClient } from './components/SupplierClient'
 
-export default async function SuppliersPage() {
-    const suppliers = await prisma.supplier.findMany({
-        orderBy: {
-            name: 'asc'
-        }
-    });
+const SuppliersPage = async () => {
+  const suppliers = await getSuppliers()
 
-    return (
-        <div>
-            <PageHeader title="Proveedores">
-                <Button asChild>
-                    <Link href="/dashboard/finance/suppliers/new">Crear Proveedor</Link>
-                </Button>
-            </PageHeader>
-            <SuppliersDataTable columns={columns} data={suppliers} />
-        </div>
-    );
-} 
+  return (
+    <div className="flex-col">
+      <div className="flex-1 space-y-4 p-8 pt-6">
+        <SupplierClient data={suppliers} />
+      </div>
+    </div>
+  )
+}
+
+export default SuppliersPage
 

@@ -1,31 +1,47 @@
-import { Plus } from 'lucide-react'
-
-import { Button } from '@/components/ui/button'
-import { Heading } from '@/components/ui/heading'
-import { Separator } from '@/components/ui/separator'
-import Link from 'next/link'
-import { getKnowledgeBaseEntries } from './actions'
-import { columns } from './components/columns'
-import { KnowledgeBaseTable } from './components/knowledge-base-table'
+import { Heading } from "@/components/ui/heading";
+import { Separator } from "@/components/ui/separator";
+import { getKnowledgeBaseEntries } from "./actions";
+import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { NewEntryForm } from "./components/NewEntryForm";
+import Link from "next/link";
 
 export default async function KnowledgeBasePage() {
-  const data = await getKnowledgeBaseEntries()
+    const result = await getKnowledgeBaseEntries();
 
-  return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
-      <div className="flex items-center justify-between">
-        <Heading
-          title={`Base de Conocimiento (${data.length})`}
-          description="Administra los checklists y procedimientos por modelo de equipo"
-        />
-        <Link href="/dashboard/knowledge-base/new">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> Nueva Ficha de Modelo
-          </Button>
-        </Link>
-      </div>
-      <Separator />
-      <KnowledgeBaseTable columns={columns} data={data} />
-    </div>
-  )
+    if (!result.success) {
+        // Manejar el caso de error, quizás mostrar un mensaje
+        return <div>Error al cargar la base de conocimiento: {result.error}</div>;
+    }
+    
+    const entries = result.data || [];
+
+    return (
+        <div className="flex-1 space-y-4 p-8 pt-6">
+            <Heading
+                title="Base de Conocimiento"
+                description="Gestiona las plantillas de checklist para cada modelo de equipo."
+            />
+            <Separator />
+            <div className="mb-6">
+                <h2 className="text-xl font-semibold mb-2">Añadir Nueva Entrada</h2>
+                <NewEntryForm />
+            </div>
+            <Separator />
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+                {entries.map(entry => (
+                    <Link href={`/dashboard/knowledge-base/${entry.id}`} key={entry.id}>
+                        <Card className="hover:shadow-md transition-shadow">
+                            <CardHeader>
+                                <CardTitle>{entry.model}</CardTitle>
+                                <CardDescription>Gestionar checklists</CardDescription>
+                            </CardHeader>
+                        </Card>
+                    </Link>
+                ))}
+                {entries.length === 0 && (
+                    <p className="text-muted-foreground col-span-full">No hay entradas en la base de conocimiento todavía.</p>
+                )}
+            </div>
+        </div>
+    );
 } 

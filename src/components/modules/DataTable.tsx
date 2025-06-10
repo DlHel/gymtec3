@@ -63,7 +63,13 @@ export function DataTable<TData, TValue>({
 
   const filterColumn = searchKey || (columns[0] as any)?.accessorKey;
 
-  const handleRowClick = (row: any) => {
+  const handleRowClick = (row: any, event: React.MouseEvent) => {
+    // Evita la navegación si el clic fue en un botón, enlace o sus hijos (ej. un ícono SVG dentro de un botón)
+    const target = event.target as HTMLElement;
+    if (target.closest('button') || target.closest('a')) {
+      return;
+    }
+
     if (onRowClick) {
       const href = onRowClick(row.original)
       router.push(href)
@@ -109,7 +115,7 @@ export function DataTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  onClick={() => handleRowClick(row)}
+                  onClick={(event) => handleRowClick(row, event)}
                   className={onRowClick ? "cursor-pointer" : ""}
                 >
                   {row.getVisibleCells().map((cell) => (

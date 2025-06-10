@@ -29,7 +29,7 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({
   clientId,
   onClose,
 }) => {
-  const initialState = { message: null, errors: {} }
+  const initialState = { message: '', errors: {} }
   const [state, dispatch] = useFormState(createEquipment, initialState)
   const [locations, setLocations] = useState<Location[]>([])
   const [
@@ -63,7 +63,7 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({
   }
 
   const handleFormAction = (formData: FormData) => {
-    formData.set('qrCode', internalCode)
+    formData.set('internalCode', internalCode)
     dispatch(formData)
   }
 
@@ -141,11 +141,11 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="qrCode">Código Interno (QR o Barras)</Label>
+          <Label htmlFor="internalCode">Código Interno (QR o Barras)</Label>
           <div className="flex items-center gap-2">
             <Input
-              id="qrCode"
-              name="qrCode"
+              id="internalCode"
+              name="internalCode"
               placeholder="Opcional"
               value={internalCode}
               onChange={e => setInternalCode(e.target.value)}
@@ -173,9 +173,9 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({
               <span className="sr-only">Escanear Código de Barras</span>
             </Button>
           </div>
-          {state.errors?.qrCode && (
+          {state.errors?.internalCode && (
             <p className="text-sm font-medium text-destructive">
-              {state.errors.qrCode[0]}
+              {state.errors.internalCode[0]}
             </p>
           )}
         </div>

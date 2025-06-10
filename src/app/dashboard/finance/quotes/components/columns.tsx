@@ -1,7 +1,6 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { Client, Ticket } from "@prisma/client"
 import { MoreHorizontal } from "lucide-react"
 import Link from "next/link"
 import {
@@ -13,62 +12,80 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Quote } from "@prisma/client"
+import { format } from "date-fns"
 
-export type Quote = {
-    id: string;
-    quoteNumber: string;
-    status: string;
-    issueDate: Date;
-    total: number;
-    client: Client;
-    ticket: Ticket | null;
+export type QuoteWithDetails = Quote & {
+    client: { name: string }
+    ticket: { title: string } | null
 }
 
-const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
-    DRAFT: "secondary",
-    SENT: "default",
-    ACCEPTED: "default",
-    REJECTED: "destructive",
-};
+const statuses: { [key: string]: string } = {
+    PENDING: "Pendiente",
+    APPROVED: "Aprobada",
+    REJECTED: "Rechazada",
+    INVOICED: "Facturada",
+}
 
-export const columns: ColumnDef<Quote>[] = [
+const statusColors: { [key: string]: string } = {
+    PENDING: "bg-yellow-500",
+    APPROVED: "bg-green-500",
+    REJECTED: "bg-red-500",
+    INVOICED: "bg-blue-500",
+}
+
+export const columns: ColumnDef<QuoteWithDetails>[] = [
     {
-        accessorKey: "quoteNumber",
-        header: "Nº Cotización",
-    },
-    {
-        accessorKey: "client.name",
-        header: "Cliente",
-    },
-    {
-        accessorKey: "ticket.title",
-        header: "Ticket Asociado",
+        accessorKey: "id",
+        header: "Cotización ID",
         cell: ({ row }) => {
-            const ticket = row.original.ticket;
-            return ticket ? <Link href={`/dashboard/tickets/${ticket.id}`} className="underline">{ticket.title}</Link> : "N/A";
-        }
+            const id = row.getValue("id") as string
+            return <div className="font-medium">...{id.slice(-6)}</div>
+        },
+    },
+    {
+        accessorKey: "client",
+        header: "Cliente",
+        cell: ({ row }) => row.original.client.name,
+    },
+    {
+        accessorKey: "ticket",
+        header: "Ticket Asociado",
+        cell: ({ row }) =>
+            row.original.ticket ? row.original.ticket.title : "N/A",
     },
     {
         accessorKey: "status",
         header: "Estado",
         cell: ({ row }) => {
-            const status = row.getValue("status") as string;
-            const variant = statusVariantMap[status] || "default";
-            return <Badge variant={variant}>{status}</Badge>
-        }
+            const status = row.getValue("status") as string
+            return (
+                <Badge
+                    className={`text-white ${statusColors[status] || "bg-gray-500"}`}
+                >
+                    {statuses[status] || status}
+                </Badge>
+            )
+        },
     },
     {
         accessorKey: "total",
-        header: "Total",
+        header: "Monto Total",
         cell: ({ row }) => {
-            const amount = parseFloat(row.getValue("total"))
-            const formatted = new Intl.NumberFormat("es-CL", {
+            const total = parseFloat(row.getValue("total"))
+            return new Intl.NumberFormat("es-CL", {
                 style: "currency",
                 currency: "CLP",
-            }).format(amount)
-
-            return <div className="text-right font-medium">{formatted}</div>
-        }
+            }).format(total)
+        },
+    },
+    {
+        accessorKey: "issueDate",
+        header: "Fecha de Emisión",
+        cell: ({ row }) => {
+            const date = row.getValue("issueDate") as string
+            return <span>{format(new Date(date), "dd/MM/yyyy")}</span>
+        },
     },
     {
         id: "actions",
@@ -86,9 +103,15 @@ export const columns: ColumnDef<Quote>[] = [
                     <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                         <DropdownMenuItem asChild>
-                            <Link href={`/dashboard/finance/quotes/edit/${quote.id}`}>Ver / Editar</Link>
+                            <Link href={`/dashboard/finance/quotes/edit/${quote.id}`}>
+                                Ver / Editar
+                            </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem>Eliminar</DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={() => navigator.clipboard.writeText(quote.id)}
+                        >
+                            Copiar ID de la Cotización
+                        </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
             )

@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
@@ -6,6 +7,9 @@ async function main() {
   console.log('🌱 Iniciando seed de la base de datos...')
   
   // Limpiar la base de datos
+  await prisma.purchaseOrderItem.deleteMany();
+  await prisma.purchaseOrder.deleteMany();
+  await prisma.supplier.deleteMany();
   await prisma.partUsage.deleteMany();
   await prisma.comment.deleteMany();
   await prisma.timeEntry.deleteMany();
@@ -16,6 +20,7 @@ async function main() {
   await prisma.equipment.deleteMany();
   await prisma.location.deleteMany();
   await prisma.contract.deleteMany();
+  await prisma.serviceLevelAgreement.deleteMany(); 
   await prisma.client.deleteMany();
   await prisma.account.deleteMany();
   await prisma.session.deleteMany();
@@ -25,25 +30,27 @@ async function main() {
   console.log('🧹 Base de datos limpiada...')
 
   // Crear usuarios
+  const adminPassword = await bcrypt.hash('admin123', 10)
   const adminUser = await prisma.user.create({
     data: {
       email: 'admin@gymtec.com',
       name: 'Administrador',
-      password: 'admin123', // En producción usar hash
+      password: adminPassword,
       role: 'ADMIN',
     },
   })
 
+  const techPassword = await bcrypt.hash('tech123', 10)
   const techUser = await prisma.user.create({
     data: {
       email: 'tecnico@gymtec.com',
       name: 'Juan Técnico',
-      password: 'tech123', // En producción usar hash
+      password: techPassword,
       role: 'TECHNICIAN',
     },
   })
 
-  console.log('✅ Usuarios creados')
+  console.log('✅ Usuarios creados (admin y técnico)')
 
   // Crear clientes
   const client1 = await prisma.client.create({
@@ -55,6 +62,20 @@ async function main() {
       address: 'Av. Principal 123, Santiago',
     },
   })
+
+  // Crear usuario para el cliente
+  const clientPassword = await bcrypt.hash('cliente123', 10)
+  const clientUser = await prisma.user.create({
+    data: {
+      email: 'cliente@gimnasiocentral.com',
+      name: 'Usuario Gimnasio Central',
+      password: clientPassword,
+      role: 'CLIENT',
+      clientId: client1.id, // Vinculando con el cliente
+    },
+  })
+  
+  console.log('✅ Usuario cliente creado y vinculado')
 
   const client2 = await prisma.client.create({
     data: {
@@ -128,35 +149,50 @@ async function main() {
 
   console.log('✅ Equipos creados')
 
+  // Crear SLA de prueba
+  const standardSla = await prisma.serviceLevelAgreement.create({
+    data: {
+      name: 'SLA Estándar',
+      description: 'Tiempo de respuesta de 8 horas, resolución en 48 horas.',
+      responseTimeHours: 8,
+      resolutionTimeHours: 48,
+    },
+  })
+
+  console.log('✅ SLA creado')
+
   // Crear contratos
   await prisma.contract.create({
     data: {
+      contractNumber: 'CTR-001',
       clientId: client1.id,
       type: 'FIXED_RATE',
       startDate: new Date('2024-01-01'),
       endDate: new Date('2024-12-31'),
-      sla: JSON.stringify({
-        responseTime: '4 horas',
-        resolutionTime: '24 horas',
-        availability: '99.5%',
-      }),
+      slaId: standardSla.id,
     },
   })
 
   await prisma.contract.create({
     data: {
+      contractNumber: 'CTR-002',
       clientId: client2.id,
       type: 'PER_VISIT',
       startDate: new Date('2024-06-01'),
-      sla: JSON.stringify({
-        responseTime: '8 horas',
-        resolutionTime: '48 horas',
-        availability: '95%',
-      }),
+      endDate: new Date('2025-05-31'),
+      slaId: standardSla.id,
     },
   })
 
   console.log('✅ Contratos creados')
+
+  // Crear Proveedor
+  const supplier1 = await prisma.supplier.create({
+    data: {
+      name: 'Proveedor de Repuestos Global',
+    },
+  })
+  console.log('✅ Proveedor creado')
 
   // Crear repuestos
   const part1 = await prisma.part.create({
@@ -166,6 +202,7 @@ async function main() {
       cost: 25000,
       stock: 15,
       minStock: 5,
+      supplierId: supplier1.id,
     },
   })
 
@@ -176,6 +213,7 @@ async function main() {
       cost: 150000,
       stock: 3,
       minStock: 2,
+      supplierId: supplier1.id,
     },
   })
 
@@ -186,10 +224,11 @@ async function main() {
       cost: 35000,
       stock: 8,
       minStock: 3,
+      supplierId: supplier1.id,
     },
   })
 
-  console.log('✅ Repuestos creados')
+  console.log('✅ Repuestos creados y vinculados a proveedor')
 
   // Crear tickets
   const ticket1 = await prisma.ticket.create({
@@ -202,11 +241,6 @@ async function main() {
       equipmentId: equipment1.id,
       assignedToId: techUser.id,
       createdById: adminUser.id,
-      checklistState: JSON.stringify([
-        { task: 'Lubricar correa', completed: true },
-        { task: 'Revisar motor', completed: false },
-        { task: 'Calibrar sensores', completed: false },
-      ]),
     },
   })
 
@@ -220,11 +254,6 @@ async function main() {
       equipmentId: equipment2.id,
       assignedToId: techUser.id,
       createdById: adminUser.id,
-      checklistState: JSON.stringify([
-        { task: 'Lubricar correa', completed: true },
-        { task: 'Revisar motor', completed: false },
-        { task: 'Calibrar sensores', completed: false },
-      ]),
     },
   })
 
