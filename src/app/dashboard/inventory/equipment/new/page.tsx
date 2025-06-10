@@ -1,18 +1,23 @@
-import { prisma } from "@/lib/prisma";
-import { EquipmentForm } from "../components/EquipmentForm";
+import { Heading } from '@/components/ui/heading'
+import { Separator } from '@/components/ui/separator'
+import { EquipmentForm } from '../components/equipment-form'
+import { getClientsAndLocations } from './actions'
 
 export default async function NewEquipmentPage() {
-    const clients = await prisma.client.findMany({
-        include: {
-            locations: true
-        }
-    });
+  const clients = await getClientsAndLocations()
 
-    return (
-        <div className="container mx-auto py-10">
-            <div className="mx-auto max-w-4xl">
-                <EquipmentForm clients={clients} />
-            </div>
+  return (
+    <div className="flex-col">
+      <div className="flex-1 space-y-4 p-8 pt-6">
+        <div className="flex items-center justify-between">
+          <Heading
+            title="Nuevo Equipo"
+            description="Añade un nuevo equipo al inventario de un cliente"
+          />
         </div>
-    );
+        <Separator />
+        <EquipmentForm clients={clients} />
+      </div>
+    </div>
+  )
 } 

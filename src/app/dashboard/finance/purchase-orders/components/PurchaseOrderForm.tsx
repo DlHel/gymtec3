@@ -1,10 +1,11 @@
-import { createPurchaseOrder } from "../actions"
-import { startTransition } from "react"
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useFieldArray, useForm } from "react-hook-form"
+import { startTransition } from "react"
+import { useRouter } from "next/navigation"
 import * as z from "zod"
+
 import { Button } from "@/components/ui/button"
 import {
     Form,
@@ -23,13 +24,12 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { Part, PurchaseOrder, Supplier } from "@prisma/client"
-import { useRouter } from "next/navigation"
-import { toast } from "sonner"
 import { Textarea } from "@/components/ui/textarea"
+import { toast } from "sonner"
 import { TrashIcon } from "lucide-react"
+
+import { Part, PurchaseOrder, Supplier } from "@prisma/client"
 import { createPurchaseOrder, updatePurchaseOrder } from "../actions"
-import { startTransition } from "react"
 
 const formSchema = z.object({
     supplierId: z.string().min(1, "Debe seleccionar un proveedor."),
@@ -47,7 +47,6 @@ const formSchema = z.object({
 
 interface PurchaseOrderFormProps {
     purchaseOrder?: PurchaseOrder & { items: { partId: string | null; description: string; quantity: number; unitPrice: number; }[] };
-
     suppliers: Supplier[];
     parts: Part[];
 }
@@ -142,7 +141,6 @@ export function PurchaseOrderForm({ purchaseOrder, suppliers, parts }: PurchaseO
                             </FormItem>
                         )}
                     />
-                    {/* Fechas podrían ir aquí si se necesita UI para ellas */}
                 </div>
                 
                 {/* Items de la Orden */}

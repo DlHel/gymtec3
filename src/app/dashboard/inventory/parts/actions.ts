@@ -110,4 +110,26 @@ export async function deletePart(id: string) {
     } catch (error) {
         return { message: "Error de base de datos: No se pudo eliminar el repuesto." };
     }
+}
+
+export async function getParts() {
+  const parts = await prisma.part.findMany({
+    include: {
+      supplier: {
+        select: {
+          name: true,
+        },
+      },
+    },
+    orderBy: {
+      name: 'asc',
+    },
+  })
+
+  // Map to include supplierName and a flag for low stock
+  return parts.map((part) => ({
+    ...part,
+    supplierName: part.supplier?.name ?? 'N/A',
+    isLowStock: part.stock <= part.minStock,
+  }))
 } 

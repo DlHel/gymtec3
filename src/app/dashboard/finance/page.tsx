@@ -1,1 +1,11 @@
-import { PageHeader } from "@/components/modules/PageHeader";`n`nexport default function FinancePage() {`n    return (`n        <PageHeader title="Módulo de Finanzas">`n            <p className="text-muted-foreground">`n                Seleccione una sección del menú para empezar.`n            </p>`n        </PageHeader>`n    )`n}
+import { PageHeader } from "@/components/modules/PageHeader";
+
+export default function FinancePage() {
+    return (
+        <PageHeader title="MÃ³dulo de Finanzas">
+            <p className="text-muted-foreground">
+                Seleccione una secciÃ³n del menÃº para empezar.
+            </p>
+        </PageHeader>
+    )
+}

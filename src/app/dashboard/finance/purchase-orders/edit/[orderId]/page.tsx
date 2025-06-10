@@ -1,10 +1,10 @@
-import { db } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/modules/PageHeader";
 import { PurchaseOrderForm } from "../../components/PurchaseOrderForm";
 
 async function getOrderData(orderId: string) {
-    const purchaseOrder = await db.purchaseOrder.findUnique({
+    const purchaseOrder = await prisma.purchaseOrder.findUnique({
         where: { id: orderId },
         include: {
             items: true,
@@ -13,8 +13,8 @@ async function getOrderData(orderId: string) {
 
     if (!purchaseOrder) return { purchaseOrder: null, suppliers: [], parts: [] };
 
-    const suppliers = await db.supplier.findMany();
-    const parts = await db.part.findMany();
+    const suppliers = await prisma.supplier.findMany();
+    const parts = await prisma.part.findMany();
 
     return { purchaseOrder, suppliers, parts };
 }

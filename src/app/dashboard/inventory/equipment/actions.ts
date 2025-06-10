@@ -88,4 +88,27 @@ export async function deleteEquipment(id: string) {
     } catch (error) {
         return { message: "Error de base de datos: No se pudo eliminar el equipo." };
     }
+}
+
+export async function getEquipment() {
+  const equipment = await prisma.equipment.findMany({
+    include: {
+      location: {
+        include: {
+          client: true,
+        },
+      },
+    },
+    orderBy: {
+      location: {
+        client: {
+          name: 'asc',
+        },
+      },
+    },
+  })
+
+  // We are mapping the data to flatten the structure for easier column access
+  // and to ensure we are only sending the necessary data to the client.
+  return equipment
 } 

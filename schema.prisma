@@ -70,6 +70,7 @@ model Equipment {
   serialNumber     String?   @unique
   purchaseDate     DateTime?
   installationDate DateTime?
+  cost             Float?    // Costo de adquisición del equipo
   locationId       String
   location         Location  @relation(fields: [locationId], references: [id])
   tickets          Ticket[]

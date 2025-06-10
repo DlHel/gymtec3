@@ -21,6 +21,7 @@ export default async function SuppliersPage() {
                 </Button>
             </PageHeader>
             <SuppliersDataTable columns={columns} data={suppliers} />
+        </div>
     );
 } 
 

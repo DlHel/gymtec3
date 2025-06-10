@@ -1,10 +1,10 @@
-import { db } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { SupplierForm } from "../../components/SupplierForm";
 import { PageHeader } from "@/components/modules/PageHeader";
 
 export default async function EditSupplierPage({ params }: { params: { supplierId: string } }) {
-    const supplier = await db.supplier.findUnique({
+    const supplier = await prisma.supplier.findUnique({
         where: {
             id: params.supplierId,
         },

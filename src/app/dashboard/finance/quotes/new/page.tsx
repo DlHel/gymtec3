@@ -1,1 +1,26 @@
-import { db } from "@/lib/db";`nimport { PageHeader } from "@/components/modules/PageHeader";`nimport { QuoteForm } from "../components/QuoteForm";`n`nasync function getFormData() {`n    const clients = await db.client.findMany();`n    const tickets = await db.ticket.findMany({`n        where: {`n            status: { not: "CLOSED" }`n        }`n    });`n    return { clients, tickets };`n}`n`nexport default async function NewQuotePage() {`n    const { clients, tickets } = await getFormData();`n`n    return (`n        <div>`n            <PageHeader title="Crear Cotización" />`n            <div className="p-8">`n                <QuoteForm clients={clients} tickets={tickets} />`n            </div>`n        </div>`n    )`n}
+import { prisma } from "@/lib/prisma";
+import { PageHeader } from "@/components/modules/PageHeader";
+import { QuoteForm } from "../components/QuoteForm";
+
+async function getFormData() {
+    const clients = await prisma.client.findMany();
+    const tickets = await prisma.ticket.findMany({
+        where: {
+            status: { not: "CLOSED" }
+        }
+    });
+    return { clients, tickets };
+}
+
+export default async function NewQuotePage() {
+    const { clients, tickets } = await getFormData();
+
+    return (
+        <div>
+            <PageHeader title="Crear CotizaciÃ³n" />
+            <div className="p-8">
+                <QuoteForm clients={clients} tickets={tickets} />
+            </div>
+        </div>
+    )
+}

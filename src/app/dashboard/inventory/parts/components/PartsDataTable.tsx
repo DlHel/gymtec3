@@ -1,17 +1,18 @@
 "use client"
 
 import { DataTable } from "@/components/modules/DataTable"
-import { columns } from "./columns"
-import { Part } from "@prisma/client"
+import { columns, PartColumn } from "./columns"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { PlusCircle } from "lucide-react"
+import { ColumnDef } from "@tanstack/react-table"
 
 interface PartsDataTableProps {
-    parts: Part[]
+    data: PartColumn[]
+    columns: ColumnDef<PartColumn>[]
 }
 
-export default function PartsDataTable({ parts }: PartsDataTableProps) {
+export function PartsDataTable({ data, columns }: PartsDataTableProps) {
 
     const newPartButton = (
         <Link href="/dashboard/inventory/parts/new">
@@ -25,9 +26,10 @@ export default function PartsDataTable({ parts }: PartsDataTableProps) {
     return (
         <DataTable 
             columns={columns} 
-            data={parts} 
+            data={data} 
             searchKey="name"
             newButton={newPartButton}
+            onRowClick={(row) => `/dashboard/inventory/parts/edit/${row.id}`}
         />
     )
 } 

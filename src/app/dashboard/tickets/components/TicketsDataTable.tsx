@@ -1,22 +1,16 @@
 "use client"
 
 import { DataTable } from "@/components/modules/DataTable"
-import { columns } from "./columns"
+import { columns, TicketWithRelations } from "./columns"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { PlusCircle } from "lucide-react"
-import { Ticket, User, Client } from "@prisma/client"
-
-type TicketWithRelations = Ticket & {
-    client: Client
-    assignedTo: User | null
-}
 
 interface TicketsDataTableProps {
-    tickets: TicketWithRelations[]
+    data: TicketWithRelations[]
 }
 
-export default function TicketsDataTable({ tickets }: TicketsDataTableProps) {
+export function TicketsDataTable({ data }: TicketsDataTableProps) {
 
     const newTicketButton = (
         <Link href="/dashboard/tickets/new">
@@ -30,7 +24,7 @@ export default function TicketsDataTable({ tickets }: TicketsDataTableProps) {
     return (
         <DataTable 
             columns={columns} 
-            data={tickets} 
+            data={data} 
             searchKey="title"
             newButton={newTicketButton}
             onRowClick={(row) => `/dashboard/tickets/${row.id}`}

@@ -1,10 +1,10 @@
-import { db } from "@/lib/db"
+import { prisma } from "@/lib/prisma"
 import { PageHeader } from "@/components/modules/PageHeader"
 import { PurchaseOrderForm } from "../components/PurchaseOrderForm";
 
 async function getFormData() {
-    const suppliers = await db.supplier.findMany();
-    const parts = await db.part.findMany();
+    const suppliers = await prisma.supplier.findMany();
+    const parts = await prisma.part.findMany();
     return { suppliers, parts };
 }
 

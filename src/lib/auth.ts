@@ -1,6 +1,7 @@
 import type { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "@/lib/prisma"
+import { getServerSession } from "next-auth"
 // Es importante instalar bcrypt: npm install bcrypt
 // Y los tipos: npm install -D @types/bcrypt
 import bcrypt from "bcrypt"
@@ -70,4 +71,7 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   secret: process.env.NEXTAUTH_SECRET,
-} 
+}
+
+// Function to get server session
+export const auth = () => getServerSession(authOptions) 

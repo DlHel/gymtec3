@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
+import { notFound } from 'next/navigation'
 
 const taskSchema = z.object({
   id: z.string(),
@@ -94,4 +95,25 @@ export async function updateChecklist(checklistId: string, knowledgeBaseId: stri
   return {
     message: "Checklist actualizado exitosamente.",
   }
+}
+
+export async function getKnowledgeBaseEntry(entryId: string) {
+  const entry = await prisma.knowledgeBaseEntry.findUnique({
+    where: {
+      id: entryId,
+    },
+    include: {
+      checklists: {
+        orderBy: {
+          name: 'asc',
+        },
+      },
+    },
+  })
+
+  if (!entry) {
+    notFound()
+  }
+
+  return entry
 }

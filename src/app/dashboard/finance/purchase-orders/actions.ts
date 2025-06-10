@@ -1,6 +1,6 @@
 "use server"
 
-import { db } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -43,8 +43,8 @@ export async function createPurchaseOrder(formData: FormData) {
     const total = items.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0);
 
     try {
-        await db.$transaction(async (prisma) => {
-            const newOrder = await prisma.purchaseOrder.create({
+        await prisma.$transaction(async (tx) => {
+            const newOrder = await tx.purchaseOrder.create({
                 data: {
                     supplierId,
                     status,
@@ -56,10 +56,11 @@ export async function createPurchaseOrder(formData: FormData) {
 
             const itemsData = items.map(item => ({
                 ...item,
+                total: item.quantity * item.unitPrice,
                 purchaseOrderId: newOrder.id,
             }));
 
-            await prisma.purchaseOrderItem.createMany({
+            await tx.purchaseOrderItem.createMany({
                 data: itemsData,
             });
         });
@@ -94,9 +95,9 @@ export async function updatePurchaseOrder(orderId: string, formData: FormData) {
     const total = items.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0);
 
     try {
-        await db.$transaction(async (prisma) => {
+        await prisma.$transaction(async (tx) => {
             // 1. Actualizar la orden
-            await prisma.purchaseOrder.update({
+            await tx.purchaseOrder.update({
                 where: { id: orderId },
                 data: {
                     supplierId,
@@ -107,17 +108,18 @@ export async function updatePurchaseOrder(orderId: string, formData: FormData) {
             });
 
             // 2. Eliminar items antiguos
-            await prisma.purchaseOrderItem.deleteMany({
+            await tx.purchaseOrderItem.deleteMany({
                 where: { purchaseOrderId: orderId },
             });
 
             // 3. Crear nuevos items
             const itemsData = items.map(item => ({
                 ...item,
+                total: item.quantity * item.unitPrice,
                 purchaseOrderId: orderId,
             }));
 
-            await prisma.purchaseOrderItem.createMany({
+            await tx.purchaseOrderItem.createMany({
                 data: itemsData,
             });
         });

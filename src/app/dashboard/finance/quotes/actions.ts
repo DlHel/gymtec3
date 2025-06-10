@@ -1,7 +1,7 @@
 'use server'
 
 import { z } from 'zod';
-import { db } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
@@ -21,7 +21,7 @@ const formSchema = z.object({
 });
 
 async function generateQuoteNumber() {
-    const lastQuote = await db.quote.findFirst({
+    const lastQuote = await prisma.quote.findFirst({
         orderBy: { quoteNumber: 'desc' },
         select: { quoteNumber: true }
     });
@@ -52,7 +52,7 @@ export async function createQuote(formData: FormData) {
     const total = data.items.reduce((acc, item) => acc + item.quantity * item.unitPrice, 0);
 
     try {
-        await db.quote.create({
+        await prisma.quote.create({
             data: {
                 quoteNumber,
                 clientId: data.clientId,
@@ -65,6 +65,7 @@ export async function createQuote(formData: FormData) {
                         description: item.description,
                         quantity: item.quantity,
                         unitPrice: item.unitPrice,
+                        total: item.quantity * item.unitPrice,
                     }))
                 }
             }

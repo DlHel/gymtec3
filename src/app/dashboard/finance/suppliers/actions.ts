@@ -66,7 +66,7 @@ export async function deleteSupplier(id: string) {
         // Opcional: verificar si el proveedor tiene órdenes de compra o repuestos asociados antes de eliminar.
         // Por ahora, eliminaremos directamente.
         
-        await db.supplier.delete({
+        await prisma.supplier.delete({
             where: { id },
         });
 

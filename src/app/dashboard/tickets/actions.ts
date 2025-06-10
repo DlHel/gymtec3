@@ -7,6 +7,7 @@ import { redirect } from "next/navigation"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { TicketStatus, TicketPriority } from "@/types/tickets"
+import { auth } from '@/lib/auth'
 
 const ticketSchema = z.object({
   title: z.string().min(5, "El título debe tener al menos 5 caracteres."),
@@ -228,4 +229,31 @@ export async function addComment(ticketId: string, content: string) {
     } catch (error) {
         return { error: "No se pudo agregar el comentario." };
     }
+}
+
+export async function getTickets() {
+  const session = await auth()
+  const userId = session?.user?.id
+  const userRole = session?.user?.role
+
+  if (!userId) {
+    return [] // Should be protected by middleware
+  }
+
+  const whereClause =
+    userRole === 'ADMIN' ? {} : { assignedToId: userId }
+
+  const tickets = await prisma.ticket.findMany({
+    where: whereClause,
+    include: {
+      client: true,
+      equipment: true,
+      assignedTo: true,
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  })
+
+  return tickets
 } 

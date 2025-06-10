@@ -13,4 +13,18 @@ const checklistSchema = z.object({
   knowledgeBaseId: z.string()
 })
 
+export async function getKnowledgeBaseEntries() {
+  const entries = await prisma.knowledgeBaseEntry.findMany({
+    include: {
+      _count: {
+        select: { checklists: true },
+      },
+    },
+    orderBy: {
+      modelName: 'asc',
+    },
+  })
+  return entries
+}
+
 // ... existing code ... 

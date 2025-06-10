@@ -1,24 +1,31 @@
-import { prisma } from "@/lib/prisma"
-import EquipmentDataTable from "./components/EquipmentDataTable"
+import { Plus } from 'lucide-react'
 
-export default async function EquipmentMasterPage() {
-    const equipment = await prisma.equipment.findMany({
-        include: {
-            location: {
-                include: {
-                    client: true
-                }
-            }
-        }
-    })
+import { Button } from '@/components/ui/button'
+import { Heading } from '@/components/ui/heading'
+import { Separator } from '@/components/ui/separator'
+import Link from 'next/link'
+import { getEquipment } from './actions'
+import { columns } from './components/columns'
+import { EquipmentTable } from './components/equipment-table'
 
-    return (
-        <div>
-            <h1 className="text-2xl font-bold mb-4">Maestro de Equipos</h1>
-            <p className="text-muted-foreground mb-6">
-                Esta tabla muestra todos los equipos registrados en el sistema, a través de todos los clientes.
-            </p>
-            <EquipmentDataTable equipment={equipment} />
-        </div>
-    )
+export default async function EquipmentPage() {
+  const data = await getEquipment()
+
+  return (
+    <div className="flex-1 space-y-4 p-8 pt-6">
+      <div className="flex items-center justify-between">
+        <Heading
+          title={`Equipos (${data.length})`}
+          description="Administra todos los equipos de los clientes"
+        />
+        <Link href="/dashboard/inventory/equipment/new">
+          <Button>
+            <Plus className="mr-2 h-4 w-4" /> Nuevo Equipo
+          </Button>
+        </Link>
+      </div>
+      <Separator />
+      <EquipmentTable columns={columns} data={data} />
+    </div>
+  )
 } 

@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/modules/PageHeader";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -6,7 +6,7 @@ import { columns } from "./components/columns";
 import { QuotesDataTable } from "./components/data-table";
 
 async function getQuotes() {
-    const quotes = await db.quote.findMany({
+    const quotes = await prisma.quote.findMany({
         include: {
             client: true,
             ticket: true,

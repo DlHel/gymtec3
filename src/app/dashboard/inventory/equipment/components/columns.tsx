@@ -2,12 +2,17 @@
 
 import { ColumnDef } from "@tanstack/react-table"
 import { Equipment, Location, Client } from "@prisma/client"
-import { ArrowUpDown } from "lucide-react"
+import { ArrowUpDown, MoreHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import Link from "next/link"
-import { CellActions } from "./CellActions"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
-type EquipmentWithLocationAndClient = Equipment & { 
+export type EquipmentWithLocationAndClient = Equipment & { 
     location: Location & { 
         client: Client 
     } 
@@ -25,37 +30,14 @@ export const columns: ColumnDef<EquipmentWithLocationAndClient>[] = [
                 Modelo <ArrowUpDown className="ml-2 h-4 w-4" />
             </Button>
         ),
-        cell: ({ row }) => {
-            const equipment = row.original;
-            return (
-                <Link href={`/dashboard/inventory/equipment/${equipment.id}`} className="hover:underline">
-                    {equipment.model}
-                </Link>
-            )
-        }
     },
     {
         accessorKey: "location.client.name",
         header: "Cliente",
-        cell: ({ row }) => {
-            const equipment = row.original
-            return (
-                <Link 
-                    href={`/dashboard/clients/${equipment.location.client.id}`} 
-                    className="hover:underline"
-                >
-                    {equipment.location.client.name}
-                </Link>
-            )
-        }
     },
     {
         accessorKey: "location.name",
         header: "Ubicación",
-        cell: ({ row }) => {
-            const equipment = row.original
-            return equipment.location.name
-        }
     },
     {
         accessorKey: "serialNumber",
@@ -75,6 +57,23 @@ export const columns: ColumnDef<EquipmentWithLocationAndClient>[] = [
     },
     {
         id: "actions",
-        cell: ({ row }) => <CellActions equipment={row.original} />,
+        cell: ({ row }) => {
+            const { id } = row.original
+            return (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Abrir menú</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                        <DropdownMenuItem>Crear Ticket</DropdownMenuItem>
+                        <DropdownMenuItem>Ver Historial</DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            )
+        },
     },
 ] 

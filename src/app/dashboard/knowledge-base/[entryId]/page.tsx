@@ -1,63 +1,29 @@
-import { prisma } from "@/lib/prisma"
-import { notFound } from "next/navigation"
-import ChecklistCard from "./components/ChecklistCard"
-import CreateChecklistDialog from "./components/CreateChecklistDialog"
+import { Heading } from '@/components/ui/heading'
+import { Separator } from '@/components/ui/separator'
+import { getKnowledgeBaseEntry } from './actions'
+import { ChecklistClient } from './components/checklist-client'
 
-interface KnowledgeBaseDetailPageProps {
-    params: {
-        entryId: string
-    }
+interface KnowledgeBaseEntryPageProps {
+  params: {
+    entryId: string
+  }
 }
 
-export default async function KnowledgeBaseDetailPage({ params }: KnowledgeBaseDetailPageProps) {
-    const entry = await prisma.knowledgeBaseEntry.findUnique({
-        where: { id: params.entryId },
-        include: {
-            checklists: {
-                orderBy: {
-                    createdAt: 'desc'
-                }
-            }
-        }
-    })
+export default async function KnowledgeBaseEntryPage({
+  params,
+}: KnowledgeBaseEntryPageProps) {
+  const entry = await getKnowledgeBaseEntry(params.entryId)
 
-    if (!entry) {
-        notFound()
-    }
-    
-    return (
-        <div className="p-6 bg-gray-50 min-h-screen">
-            <div className="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow">
-                <div className="flex justify-between items-start mb-6">
-                    <div>
-                        <h1 className="text-3xl font-bold">{entry.modelName}</h1>
-                        <p className="text-muted-foreground">{entry.description}</p>
-                    </div>
-                    <CreateChecklistDialog knowledgeBaseId={entry.id} />
-                </div>
-
-                <div className="mt-8">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-2xl font-bold">Checklists</h2>
-                    </div>
-
-                    <div className="space-y-4">
-                        {entry.checklists.map((checklist) => (
-                            <ChecklistCard 
-                                key={checklist.id} 
-                                checklist={checklist} 
-                                knowledgeBaseId={entry.id} 
-                            />
-                        ))}
-                        {entry.checklists.length === 0 && (
-                            <div className="text-center py-10 border-2 border-dashed rounded-lg">
-                                <p className="text-gray-500">No hay checklists para este modelo de equipo.</p>
-                                <p className="text-sm text-gray-400 mt-2">Puedes empezar creando uno.</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
-    )
+  return (
+    <div className="flex-col">
+      <div className="flex-1 space-y-4 p-8 pt-6">
+        <Heading
+          title={`Checklists para ${entry.modelName}`}
+          description={entry.description || 'Gestiona los checklists para este modelo.'}
+        />
+        <Separator />
+        <ChecklistClient entry={entry} />
+      </div>
+    </div>
+  )
 } 

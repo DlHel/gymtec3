@@ -1,12 +1,12 @@
-import { db } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/modules/PageHeader";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { PurchaseOrdersDataTable } from "./components/PurchaseOrdersDataTable";
 import { columns } from "./components/columns";
 
-asyn"c function getPurchaseOrders() {
-    const orders = await db.purchaseOrder.findMany({
+async function getPurchaseOrders() {
+    const orders = await prisma.purchaseOrder.findMany({
         include: {
             supplier: true,
         },

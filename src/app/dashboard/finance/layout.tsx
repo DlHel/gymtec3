@@ -1,1 +1,37 @@
-"use client";`n`nimport Link from "next/link";`nimport { usePathname } from "next/navigation";`nimport { cn } from "@/lib/utils";`n`nexport default function FinanceLayout({ children }: { children: React.ReactNode }) {`n    const pathname = usePathname();`n`n    const navLinks = [`n        { name: "Proveedores", href: "/dashboard/finance/suppliers" },`n        { name: "Órdenes de Compra", href: "/dashboard/finance/purchase-orders" },`n        { name: "Cotizaciones", href: "/dashboard/finance/quotes" },`n    ];`n`n    return (`n        <div className="flex">`n            <aside className="w-64 flex-shrink-0 border-r pr-6">`n                <nav className="flex flex-col space-y-2">`n                    {navLinks.map(link => (`n                        <Link key={link.href} href={link.href}>`n                            <span className={cn(`n                                "group flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",`n                                pathname === link.href ? "bg-accent" : "transparent"`n                            )}>`n                                {link.name}`n                            </span>`n                        </Link>`n                    ))}`n                </nav>`n            </aside>`n            <main className="flex-1 p-8">`n                {children}`n            </main>`n        </div>`n    )`n}
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+
+export default function FinanceLayout({ children }: { children: React.ReactNode }) {
+    const pathname = usePathname();
+
+    const navLinks = [
+        { name: "Proveedores", href: "/dashboard/finance/suppliers" },
+        { name: "Órdenes de Compra", href: "/dashboard/finance/purchase-orders" },
+        { name: "Cotizaciones", href: "/dashboard/finance/quotes" },
+    ];
+
+    return (
+        <div className="flex">
+            <aside className="w-64 flex-shrink-0 border-r pr-6">
+                <nav className="flex flex-col space-y-2">
+                    {navLinks.map(link => (
+                        <Link key={link.href} href={link.href}>
+                            <span className={cn(
+                                "group flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+                                pathname === link.href ? "bg-accent" : "transparent"
+                            )}>
+                                {link.name}
+                            </span>
+                        </Link>
+                    ))}
+                </nav>
+            </aside>
+            <main className="flex-1 p-8">
+                {children}
+            </main>
+        </div>
+    )
+}

@@ -14,11 +14,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
+import { format } from 'date-fns'
 
 // Combinamos los tipos para tener acceso a los datos relacionados
-type TicketWithRelations = Ticket & {
+export type TicketWithRelations = Ticket & {
   client: Client
   assignedTo: User | null
+  equipment: { model: string } | null
 }
 
 const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive" } = {
@@ -63,7 +65,7 @@ export const columns: ColumnDef<TicketWithRelations>[] = [
     header: "Creado",
     cell: ({ row }) => {
         const date = new Date(row.getValue("createdAt"))
-        return <div>{date.toLocaleDateString()}</div>
+        return <div>{format(date, 'dd/MM/yyyy')}</div>
     }
   },
   {
@@ -87,8 +89,10 @@ export const columns: ColumnDef<TicketWithRelations>[] = [
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-            <DropdownMenuItem>Editar Ticket</DropdownMenuItem>
+            <DropdownMenuLabel>Acciones Rápidas</DropdownMenuLabel>
+            <DropdownMenuItem>Asignar Técnico</DropdownMenuItem>
+            <DropdownMenuItem>Cambiar Prioridad</DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem className="text-destructive">Eliminar Ticket</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
