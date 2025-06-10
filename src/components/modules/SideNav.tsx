@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { BarChart, Users, Wrench, Package, BrainCircuit } from "lucide-react"
+import { BarChart, Users, Wrench, Package, BrainCircuit, Landmark } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navItems = [
@@ -10,6 +10,7 @@ const navItems = [
   { href: "/dashboard/clients", icon: Users, label: "Clientes" },
   { href: "/dashboard/tickets", icon: Wrench, label: "Tickets" },
   { href: "/dashboard/inventory", icon: Package, label: "Inventario" },
+  { href: "/dashboard/finance", icon: Landmark, label: "Finanzas" },
   { href: "/dashboard/knowledge-base", icon: BrainCircuit, label: "Base de Conocimiento" },
 ]
 
